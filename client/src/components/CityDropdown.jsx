@@ -34,7 +34,7 @@ const COUNTRY_FLAGS = {
   PK: "🇵🇰", NP: "🇳🇵",
 };
 
-const CityDropdown = ({ isOpen, onClose, onSelect, position }) => {
+const CityDropdown = ({ isOpen, onClose, onSelect, position, className = "", label = "From", type }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [apiResults, setApiResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -68,15 +68,15 @@ const CityDropdown = ({ isOpen, onClose, onSelect, position }) => {
       return;
     }
     setLoading(true);
-    searchLocations(query)
+    searchLocations(query, type)
       .then((res) => {
         const locations = res.data?.locations || [];
         setApiResults(
-          locations.map((loc) => ({
+          locations.filter(loc => loc && (loc.name || loc.cityName)).map((loc) => ({
             city: loc.cityName || loc.name,
             code: loc.iataCode,
-            name: loc.name,
-            country: loc.countryCode,
+            name: loc.name || loc.cityName,
+            country: loc.countryCode || "",
             flag: COUNTRY_FLAGS[loc.countryCode] || "🌍",
             subType: loc.subType,
           }))
@@ -101,12 +101,14 @@ const CityDropdown = ({ isOpen, onClose, onSelect, position }) => {
   // Determine which list to display
   const displayList = searchQuery.length >= 2 && useApi && apiResults.length > 0
     ? apiResults
-    : FALLBACK_AIRPORTS.filter(
-      (airport) =>
-        airport.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        airport.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        airport.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    : FALLBACK_AIRPORTS
+      .map(airport => type === 'hotels' ? ({ ...airport, subType: 'CITY', name: airport.city }) : airport)
+      .filter(
+        (airport) =>
+          (airport.city && airport.city.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (airport.code && airport.code.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (airport.name && airport.name.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
 
   const handleSelect = (airport) => {
     // Pass the IATA code as the identifier for Amadeus API
@@ -121,74 +123,146 @@ const CityDropdown = ({ isOpen, onClose, onSelect, position }) => {
   return (
     <div
       ref={dropdownRef}
-      className="absolute z-50 bg-white rounded-lg shadow-2xl border border-gray-200 mt-2 min-w-[400px] max-w-[500px] overflow-hidden"
-      style={{ top: position?.top || "100%", left: position?.left || 0 }}
+      className={`absolute z-[100] bg-white rounded-2xl shadow-2xl border border-slate-100 min-w-[320px] md:min-w-[450px] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ${className}`}
+      style={{
+        top: position?.top ?? "100%",
+        left: position?.left ?? 0,
+        right: position?.right,
+        bottom: position?.bottom,
+        ...position
+      }}
     >
-      {/* Search Input */}
-      <div className="p-3 border-b border-gray-200">
-        <div className="relative">
-          <HiSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search airport, city, or IATA code"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-          />
+      {/* Search Input Area */}
+      <div className="p-4 bg-white">
+        <div className="relative flex items-center">
+          <label className="absolute -top-2 left-3 px-1 bg-white text-[10px] font-black text-gray-400 uppercase tracking-widest z-10">
+            {label}
+          </label>
+          <div className="relative w-full">
+            <HiSearch className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder={type === 'hotels' ? "Search city or hotel name" : "Search airport, city, or IATA code"}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-4 pr-10 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-base font-bold text-slate-800 transition-all"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Section Title */}
-      <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-700">
-          {searchQuery.length >= 2 && apiResults.length > 0
-            ? `Search Results (${apiResults.length})`
-            : "Popular Airports"}
-        </h3>
-      </div>
+      {/* Sections and Scrollable List */}
+      <div className="max-h-[450px] overflow-y-auto custom-scrollbar">
+        {loading && (
+          <div className="px-4 py-4 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="font-bold uppercase tracking-widest text-[10px]">Searching...</span>
+          </div>
+        )}
 
-      {/* Loading indicator */}
-      {loading && (
-        <div className="px-4 py-3 text-center text-sm text-gray-500">
-          <span className="animate-pulse">Searching...</span>
-        </div>
-      )}
-
-      {/* Scrollable List */}
-      <div className="max-h-[400px] overflow-y-auto">
         {displayList.length === 0 && !loading ? (
-          <div className="px-4 py-8 text-center text-gray-500 text-sm">No airports found</div>
+          <div className="px-4 py-8 text-center text-gray-500 text-sm italic font-medium">No results found for "{searchQuery}"</div>
         ) : (
-          displayList.map((airport) => (
-            <button
-              key={airport.code + (airport.subType || "")}
-              type="button"
-              onClick={() => handleSelect(airport)}
-              className="w-full px-4 py-3 hover:bg-blue-50 transition-colors text-left border-b border-gray-100 last:border-b-0 group"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    {airport.subType === "CITY" ? (
-                      <FaCity className="w-3.5 h-3.5 text-gray-400" />
-                    ) : (
-                      <FaPlane className="w-3.5 h-3.5 text-blue-400" />
-                    )}
-                    <span className="text-base font-bold text-gray-900">{airport.city}</span>
-                    <span className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
-                      {airport.code}
-                    </span>
+          <>
+            {/* Group Header */}
+            <div className="px-4 py-2 bg-slate-50/80 border-y border-slate-100">
+              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                {searchQuery.length >= 2 ? "Search Results" : "Previously Searched Sectors"}
+              </h3>
+            </div>
+
+            {displayList.map((airport) => (
+              <button
+                key={airport.code + (airport.subType || "")}
+                type="button"
+                onClick={() => handleSelect(airport)}
+                className="w-full px-4 py-4 hover:bg-slate-50 transition-all text-left group border-b border-slate-50 last:border-0"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="p-2.5 bg-slate-100 rounded-xl group-hover:bg-blue-50 transition-colors">
+                      {airport.subType === "CITY" ? (
+                        <FaCity className="w-4 h-4 text-slate-400 group-hover:text-blue-500" />
+                      ) : airport.subType === "HOTEL" ? (
+                        <span className="text-sm">🏨</span>
+                      ) : (
+                        <FaPlane className="w-4 h-4 text-slate-400 group-hover:text-blue-500" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-base font-black text-slate-800 group-hover:text-blue-600 transition-colors">
+                          {airport.name === airport.city ? airport.city : airport.name}
+                        </span>
+                        {airport.code && (
+                          <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[10px] font-black rounded uppercase">
+                            {airport.code}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-400 font-bold uppercase truncate tracking-tight">
+                        {airport.name === airport.city ? airport.country : airport.city + ", " + airport.country}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 truncate">{airport.name}</p>
+                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                    <span className="text-xl shadow-sm rounded-md overflow-hidden leading-none">{airport.flag}</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{airport.country}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <span className="text-lg">{airport.flag}</span>
-                  <span className="text-xs text-gray-500">{airport.country}</span>
+              </button>
+            ))}
+
+            {searchQuery.length < 2 && (
+              <>
+                <div className="px-4 py-2 bg-slate-50/80 border-y border-slate-100 mt-2">
+                  <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                    {type === 'hotels' ? "Important Cities" : "Important Airports"}
+                  </h3>
                 </div>
-              </div>
-            </button>
-          ))
+                {FALLBACK_AIRPORTS.slice(0, 8).map((airport) => (
+                  <button
+                    key={airport.code + "_popular"}
+                    type="button"
+                    onClick={() => handleSelect(airport)}
+                    className="w-full px-4 py-4 hover:bg-slate-50 transition-all text-left group border-b border-slate-50 last:border-0"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="p-2.5 bg-slate-100 rounded-xl group-hover:bg-blue-50 transition-colors">
+                          {type === 'hotels' ? (
+                            <FaCity className="w-4 h-4 text-slate-400 group-hover:text-blue-500" />
+                          ) : (
+                            <FaPlane className="w-4 h-4 text-slate-400 group-hover:text-blue-500" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-base font-black text-slate-800 group-hover:text-blue-600 transition-colors">
+                              {airport.city}
+                            </span>
+                            {type !== 'hotels' && (
+                              <span className="px-1.5 py-0.5 bg-blue-600 text-white text-[10px] font-black rounded uppercase">
+                                {airport.code}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-400 font-bold uppercase truncate tracking-tight">
+                            {airport.name}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span className="text-xl shadow-sm rounded-md overflow-hidden leading-none">{airport.flag}</span>
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">{airport.country}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </>
+            )}
+          </>
         )}
       </div>
     </div>

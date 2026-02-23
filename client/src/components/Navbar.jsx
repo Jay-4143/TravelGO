@@ -29,11 +29,15 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="sticky top-0 z-50 bg-white shadow-sm border-b border-gray-100">
+      <nav className="sticky top-0 z-[200] bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to="/" className="flex-shrink-0 text-xl font-bold text-blue-600 hover:text-blue-700 transition-colors">
+            <Link
+              to="/"
+              onClick={() => { if (window.location.pathname === '/' || window.location.pathname === '/flights') window.location.reload(); }}
+              className="flex-shrink-0 text-xl font-bold text-blue-600 hover:text-blue-700 transition-colors"
+            >
               TravelGO
             </Link>
 
@@ -45,6 +49,11 @@ const Navbar = () => {
                   <NavLink
                     key={to}
                     to={to}
+                    onClick={() => {
+                      if (active) {
+                        window.location.reload();
+                      }
+                    }}
                     className={`flex flex-col items-center pt-2 pb-1.5 px-3 xl:px-4 rounded-t-lg transition-colors border-b-2 ${active ? "text-blue-600 border-blue-600" : "text-gray-700 border-transparent hover:text-blue-600"
                       }`}
                   >
@@ -186,17 +195,25 @@ const Navbar = () => {
         {mobileOpen && (
           <div className="lg:hidden border-t bg-white shadow-lg">
             <div className="px-4 py-4 space-y-1">
-              {navItems.map(({ to, label, Icon }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 py-2.5 text-gray-700 font-medium hover:text-blue-600"
-                >
-                  <Icon className="w-5 h-5" />
-                  {label}
-                </Link>
-              ))}
+              {navItems.map(({ to, path, label, Icon }) => {
+                const active = path === "/" ? isFlights : location.pathname === path;
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    onClick={() => {
+                      if (active) {
+                        window.location.reload();
+                      }
+                      setMobileOpen(false);
+                    }}
+                    className={`flex items-center gap-2 py-2.5 font-medium transition-colors ${active ? "text-blue-600" : "text-gray-700 hover:text-blue-600"}`}
+                  >
+                    <Icon className="w-5 h-5" />
+                    {label}
+                  </Link>
+                );
+              })}
               <div className="pt-4 mt-2 border-t flex flex-col gap-2">
                 <div className="px-2 py-2 text-sm font-bold text-gray-900 flex items-center gap-2">
                   <span>{currency.flag}</span>
@@ -220,7 +237,7 @@ const Navbar = () => {
                     <Link to="/profile" onClick={() => setMobileOpen(false)} className="px-2 py-2 text-sm font-medium">
                       My Profile
                     </Link>
-                    <Link to="/bookings" onClick={() => setMobileOpen(false)} className="px-2 py-2 text-sm font-medium">
+                    <Link to="/my-bookings" onClick={() => setMobileOpen(false)} className="px-2 py-2 text-sm font-medium">
                       My Bookings
                     </Link>
                     <button onClick={() => { logout(); setMobileOpen(false); }} className="px-2 py-2 text-sm font-medium text-red-600 text-left">

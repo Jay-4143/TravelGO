@@ -9,9 +9,13 @@ const SearchableDropdown = ({
     label,
     icon: Icon = FaMapMarkerAlt,
     iconColor = "text-blue-500",
-    required = false
+    required = false,
+    isOpen: controlledIsOpen,
+    setIsOpen: setControlledIsOpen
 }) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [internalIsOpen, setInternalIsOpen] = useState(false);
+    const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : internalIsOpen;
+    const setIsOpen = setControlledIsOpen !== undefined ? setControlledIsOpen : setInternalIsOpen;
     const [searchTerm, setSearchTerm] = useState("");
     const dropdownRef = useRef(null);
 
@@ -28,7 +32,7 @@ const SearchableDropdown = ({
         };
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    }, [setIsOpen]);
 
     const handleSelect = (option) => {
         onChange(option);

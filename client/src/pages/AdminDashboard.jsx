@@ -58,7 +58,7 @@ const AdminDashboard = () => {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        if (!user) { navigate('/login'); return; }
+        if (!user) { navigate('/'); return; }
         if (user.role !== 'admin') { navigate('/'); return; }
         fetchDashboard();
     }, [user, navigate]);
@@ -153,7 +153,7 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                     <button
-                        onClick={() => { logout(); navigate('/login'); }}
+                        onClick={() => { logout(); navigate('/'); }}
                         className="w-full flex items-center gap-2 px-4 py-2 rounded-xl text-sm text-slate-300 hover:bg-slate-800 transition-colors"
                     >
                         <FaSignOutAlt className="w-4 h-4" /> Sign Out

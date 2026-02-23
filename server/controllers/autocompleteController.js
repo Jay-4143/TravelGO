@@ -4,6 +4,7 @@
  */
 
 const amadeusService = require('../services/amadeusService');
+const Hotel = require('../models/hotel');
 const { transformLocations } = require('../utils/amadeusTransformers');
 
 /**
@@ -13,29 +14,61 @@ const { transformLocations } = require('../utils/amadeusTransformers');
  */
 exports.searchLocations = async (req, res, next) => {
     try {
-        const { keyword, subType = 'AIRPORT,CITY' } = req.query;
+        const { keyword, subType = 'AIRPORT,CITY', type } = req.query;
 
         if (!keyword || keyword.length < 2) {
             return res.json({ success: true, locations: [] });
         }
 
-        const response = await amadeusService.searchLocations(keyword, subType);
-        const locations = transformLocations(response.data || []);
+        let locations = [];
+        let source = 'amadeus';
 
-        res.json({ success: true, locations });
+        try {
+            // If type is hotels, we only want cities from Amadeus
+            const amadeusSubType = type === 'hotels' ? 'CITY' : subType;
+            const response = await amadeusService.searchLocations(keyword, amadeusSubType);
+            locations = transformLocations(response.data || []);
+        } catch (error) {
+            console.error('Amadeus Location Search Error:', error.description || error.message);
+            locations = getFallbackLocations(keyword, type);
+            source = 'fallback';
+        }
+
+        // If type is hotels, also search our local Hotel model for name matches
+        if (type === 'hotels') {
+            const localHotels = await Hotel.find({
+                isActive: true,
+                $or: [
+                    { name: new RegExp(keyword, 'i') },
+                    { city: new RegExp(keyword, 'i') }
+                ]
+            }).limit(10).lean();
+
+            const transformedLocal = localHotels.map(h => ({
+                iataCode: h.city.substring(0, 3).toUpperCase(), // Fake/approximation
+                name: h.name,
+                cityName: h.city,
+                countryCode: 'IN', // Assuming local hotels are mostly India for now
+                subType: 'HOTEL',
+                label: `${h.name} – ${h.city}`
+            }));
+
+            // Merge and de-duplicate (prefer local hotels if names match)
+            locations = [...transformedLocal, ...locations].filter((loc, index, self) =>
+                index === self.findIndex((t) => t.name === loc.name && t.cityName === loc.cityName)
+            );
+        }
+
+        res.json({ success: true, locations, source });
     } catch (error) {
-        console.error('Amadeus Location Search Error:', error.description || error.message);
-
-        // Return common Indian cities/airports as fallback
-        const fallback = getFallbackLocations(req.query.keyword || '');
-        res.json({ success: true, locations: fallback, source: 'fallback' });
+        next(error);
     }
 };
 
 /**
  * Hardcoded fallback for when Amadeus is down or rate-limited
  */
-function getFallbackLocations(keyword) {
+function getFallbackLocations(keyword, type) {
     const all = [
         { iataCode: 'DEL', name: 'Indira Gandhi Intl', cityName: 'New Delhi', countryCode: 'IN', subType: 'AIRPORT', label: 'Indira Gandhi Intl (DEL) – New Delhi' },
         { iataCode: 'BOM', name: 'Chhatrapati Shivaji Intl', cityName: 'Mumbai', countryCode: 'IN', subType: 'AIRPORT', label: 'Chhatrapati Shivaji Intl (BOM) – Mumbai' },
@@ -56,10 +89,21 @@ function getFallbackLocations(keyword) {
         { iataCode: 'CDG', name: 'Charles de Gaulle', cityName: 'Paris', countryCode: 'FR', subType: 'AIRPORT', label: 'Charles de Gaulle (CDG) – Paris' },
         { iataCode: 'BKK', name: 'Suvarnabhumi', cityName: 'Bangkok', countryCode: 'TH', subType: 'AIRPORT', label: 'Suvarnabhumi (BKK) – Bangkok' },
     ];
+
+    let filtered = all;
+    if (type === 'hotels') {
+        // If hotel search, filter for cities and rename subType to HOTEL for icon consistency
+        filtered = all.map(l => ({
+            ...l,
+            subType: 'CITY',
+            name: l.cityName // Prefer city name over airport name
+        }));
+    }
+
     const kw = keyword.toLowerCase();
-    return all.filter(l =>
+    return filtered.filter(l =>
         l.iataCode.toLowerCase().includes(kw) ||
         l.name.toLowerCase().includes(kw) ||
-        l.cityName.toLowerCase().includes(kw)
+        (l.cityName && l.cityName.toLowerCase().includes(kw))
     );
 }

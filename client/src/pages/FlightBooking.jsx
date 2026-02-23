@@ -1,21 +1,57 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { createFlightBooking } from "../api/bookings";
 import SeatMap from "../components/SeatMap";
 import PaymentModal from "../components/PaymentModal";
 import { useGlobal } from "../context/GlobalContext";
 import { generateTicket } from "../utils/TicketGenerator";
 import toast from "react-hot-toast";
+import { FaChevronLeft } from "react-icons/fa";
+
+// Redesign Components
+import FlightSummaryCard from "../components/booking/FlightSummaryCard";
+import RefundTimeline from "../components/booking/RefundTimeline";
+import { RefundableUpsell, InsuranceUpsell, BaggageProtectionUpsell } from "../components/booking/UpsellSections";
+import TravellerDetailsForm from "../components/booking/TravellerDetailsForm";
+import ContactInfoForm from "../components/booking/ContactInfoForm";
+import FareSidebar from "../components/booking/FareSidebar";
+
+/* Fare Discount Config */
+const FARE_DISCOUNTS = {
+  student: { label: "Student Fare", discount: 0.05, icon: "🎓" },
+  defence: { label: "Defence Fare", discount: 0.04, icon: "🎖️" },
+  senior: { label: "Senior Citizen Fare", discount: 0.06, icon: "👴" },
+};
+
+const getFareDiscount = (price, specialFare) => {
+  if (!specialFare || !FARE_DISCOUNTS[specialFare]) return 0;
+  return Math.round(price * FARE_DISCOUNTS[specialFare].discount);
+};
 
 const FlightBooking = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { flight, returnFlight, searchParams, tripType } = location.state || {};
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(1); // Keep step for logic (1: Review & Info, 2: Seats, 3: Success)
   const [passengers, setPassengers] = useState([]);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [selectedAddons, setSelectedAddons] = useState([]);
+
+  // New States for Redesign
+  const [selectedPromo, setSelectedPromo] = useState(null);
+  const [insuranceSelected, setInsuranceSelected] = useState(null); // null means not selected yet
+  const [baggageSelected, setBaggageSelected] = useState(false);
+  const [refundableSelected, setRefundableSelected] = useState(false);
+  const [mobile, setMobile] = useState("");
+  const [email, setEmail] = useState("");
+  const [useGstin, setUseGstin] = useState(false);
+  const [gstin, setGstin] = useState("");
+  const [gstHolderName, setGstHolderName] = useState("");
+  const [gstAddress, setGstAddress] = useState("");
+  const [gstPincode, setGstPincode] = useState("");
+  const [saveGst, setSaveGst] = useState(false);
+
   const [isAutoSelect, setIsAutoSelect] = useState(false);
   const [isReturnAutoSelect, setIsReturnAutoSelect] = useState(false);
   const [returnSelectedSeats, setReturnSelectedSeats] = useState([]);
@@ -49,41 +85,45 @@ const FlightBooking = () => {
     return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
   };
 
+  /* Total Calculation */
   const calculateTotal = () => {
     if (!flight) return 0;
-    const paxCount = passengers.length || 1;
-    let baseFare = flight.price * paxCount;
+    const passengersCount = passengers.length || 1;
+    let total = flight.price * passengersCount;
+
     if (tripType === "round-trip" && returnFlight) {
-      baseFare += returnFlight.price * paxCount;
+      total += returnFlight.price * passengersCount;
     }
 
-    // Add-ons
-    const addOnTotal = selectedAddons.reduce((sum, item) => sum + item.price, 0) * paxCount;
+    // Fare Discount
+    if (searchParams?.specialFare) {
+      total -= getFareDiscount(flight.price, searchParams.specialFare) * passengersCount;
+      if (tripType === "round-trip" && returnFlight) {
+        total -= getFareDiscount(returnFlight.price, searchParams.specialFare) * passengersCount;
+      }
+    }
 
-    // Seat Premiums
-    let seatPremiumOrigin = 0;
+    // Seat Premium
     if (!isAutoSelect) {
-      selectedSeats.forEach(s => {
-        if (s.includes('A') || s.includes('F')) seatPremiumOrigin += 499;
-        else if (s.includes('C') || s.includes('D')) seatPremiumOrigin += 299;
-        else seatPremiumOrigin += 99; // Middle/Normal seats
-      });
+      total += selectedSeats.reduce((sum, s) => sum + (s.includes('A') || s.includes('F') ? 499 : (s.includes('C') || s.includes('D') ? 299 : 99)), 0);
     }
-
-    let seatPremiumReturn = 0;
     if (tripType === "round-trip" && returnFlight && !isReturnAutoSelect) {
-      returnSelectedSeats.forEach(s => {
-        if (s.includes('A') || s.includes('F')) seatPremiumReturn += 499;
-        else if (s.includes('C') || s.includes('D')) seatPremiumReturn += 299;
-        else seatPremiumReturn += 99;
-      });
+      total += returnSelectedSeats.reduce((sum, s) => sum + (s.includes('A') || s.includes('F') ? 499 : (s.includes('C') || s.includes('D') ? 299 : 99)), 0);
     }
 
-    const subtotal = baseFare + seatPremiumOrigin + seatPremiumReturn + addOnTotal;
-    const tax = Math.round(subtotal * 0.18);
-    const convenienceFee = 199 * paxCount;
+    // New Upsells
+    if (insuranceSelected) total += (199 * passengersCount);
+    if (baggageSelected) total += (95 * passengersCount);
+    if (refundableSelected) total += Math.round(flight.price * 0.1) * passengersCount;
 
-    return subtotal + tax + convenienceFee;
+    // Addons
+    total += selectedAddons.reduce((sum, a) => sum + (a.price * passengersCount), 0);
+
+    // Taxes (15%) + Convenience Fee (199 per pax)
+    const taxes = Math.round((flight.price * passengersCount) * 0.15);
+    const fees = 199 * passengersCount;
+
+    return Math.round(total + taxes + fees);
   };
 
   const handlePassengerChange = (index, field, value) => {
@@ -91,6 +131,21 @@ const FlightBooking = () => {
     updated[index] = { ...updated[index], [field]: field === "age" ? Number(value) : value };
     setPassengers(updated);
   };
+
+  useEffect(() => {
+    if (searchParams && passengers.length === 0) {
+      const adults = parseInt(searchParams.adults) || 1;
+      const children = parseInt(searchParams.children) || 0;
+      const infants = parseInt(searchParams.infants) || 0;
+
+      const initialPassengers = [];
+      for (let i = 0; i < adults; i++) initialPassengers.push({ type: 'Adult', title: '', firstName: '', lastName: '', age: 25 });
+      for (let i = 0; i < children; i++) initialPassengers.push({ type: 'Child', title: '', firstName: '', lastName: '', age: 10 });
+      for (let i = 0; i < infants; i++) initialPassengers.push({ type: 'Infant', title: '', firstName: '', lastName: '', age: 1 });
+
+      setPassengers(initialPassengers);
+    }
+  }, [searchParams]);
 
   const toggleAddon = (addon) => {
     setSelectedAddons(prev =>
@@ -101,11 +156,21 @@ const FlightBooking = () => {
   };
 
   const handleDetailsSubmit = () => {
-    if (passengers.some((p) => !p.name || !p.age)) {
-      toast.error('Please fill all passenger details.');
+    // Validation
+    if (passengers.some((p) => !p.firstName || !p.lastName || !p.title || (p.type !== 'Adult' && !p.dob))) {
+      toast.error('Please fill all passenger details, including Date of Birth for children/infants.');
+      return;
+    }
+    if (!mobile || !email) {
+      toast.error('Please fill your contact information.');
+      return;
+    }
+    if (insuranceSelected === null) {
+      toast.error('Please select an insurance option (Yes or No).');
       return;
     }
     setStep(2);
+    window.scrollTo(0, 0);
   };
 
   const handleSeatSelectionComplete = () => {
@@ -117,7 +182,7 @@ const FlightBooking = () => {
       toast.error(`Please select ${passengers.length} seats or choose Auto-select for the return flight.`);
       return;
     }
-    setStep(3);
+    handlePayment();
   };
 
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -131,14 +196,17 @@ const FlightBooking = () => {
         flightId: flight._id,
         returnFlightId: returnFlight?._id,
         passengers: passengers.map((p, i) => ({
-          name: p.name,
-          age: p.age,
+          name: `${p.title} ${p.firstName} ${p.lastName}`,
+          age: p.age || 25,
+          dob: p.dob || null,
+          type: p.type,
           seat: isAutoSelect ? "Auto-selected" : selectedSeats[i]
         })),
         seats: isAutoSelect ? passengers.map(() => "Auto") : selectedSeats,
         tripType: tripType || "one-way",
         flightDetails: flight,
-        addons: selectedAddons.map(a => ({ name: a.name, price: a.price, category: 'addon' }))
+        addons: selectedAddons.map(a => ({ name: a.name, price: a.price, category: 'addon' })),
+        contact: { mobile, email }
       });
       setCreatedBooking(res.data.booking);
       setIsPaymentModalOpen(true);
@@ -152,332 +220,203 @@ const FlightBooking = () => {
   const onPaymentSuccess = (payment) => {
     setIsPaymentModalOpen(false);
     setBookingRef(createdBooking.bookingReference);
-    setStep(4);
+    setStep(3);
+    window.scrollTo(0, 0);
   };
 
   if (!flight || !searchParams) return null;
 
-  const total = calculateTotal();
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-bold text-gray-900">Flight Booking</h1>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4].map((s) => (
-                <div
-                  key={s}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${step >= s ? "bg-red-500 text-white" : "bg-gray-200 text-gray-600"
-                    }`}
-                >
-                  {s}
+    <div className="min-h-screen bg-slate-50 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {step === 1 && (
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Main Content */}
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-8">
+                <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Review your flight details</h1>
+                <div className="flex items-center gap-6">
+                  <button
+                    onClick={() => navigate("/flights", { state: searchParams })}
+                    className="flex items-center gap-2 text-slate-500 text-xs font-bold uppercase hover:text-blue-600 transition-colors"
+                  >
+                    <FaChevronLeft className="w-2.5 h-2.5" /> Back to Search
+                  </button>
+                  <button
+                    onClick={() => navigate("/flights", { state: { ...searchParams, isModifying: true } })}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-600 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all border border-blue-100"
+                  >
+                    Modify Search
+                  </button>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {step === 1 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Passenger Details</h2>
-              <div className="space-y-4">
-                {passengers.map((p, i) => (
-                  <div key={i} className="border border-gray-200 rounded-lg p-4 relative group">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-medium text-gray-900">Passenger {i + 1}</h3>
-                      {passengers.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = passengers.filter((_, idx) => idx !== i);
-                            setPassengers(updated);
-                            // Also clear seats for that index if needed, but selectedSeats is usually managed by index too
-                            const updatedSeats = [...selectedSeats];
-                            updatedSeats.splice(i, 1);
-                            setSelectedSeats(updatedSeats);
-                            if (tripType === "round-trip") {
-                              const updatedReturnSeats = [...returnSelectedSeats];
-                              updatedReturnSeats.splice(i, 1);
-                              setReturnSelectedSeats(updatedReturnSeats);
-                            }
-                          }}
-                          className="text-red-500 hover:text-red-700 text-sm font-medium transition-colors"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">Full Name</label>
-                        <input
-                          type="text"
-                          value={p.name}
-                          onChange={(e) => handlePassengerChange(i, "name", e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">Age</label>
-                        <input
-                          type="number"
-                          value={p.age}
-                          onChange={(e) => handlePassengerChange(i, "age", e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500 outline-none"
-                          min="1"
-                          required
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={() => setPassengers([...passengers, { name: "", age: 25 }])}
-                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-red-500 hover:border-red-500 transition-colors font-medium flex items-center justify-center gap-2"
-                >
-                  <span className="text-xl">+</span> Add Passenger
-                </button>
               </div>
-              <div className="mt-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleDetailsSubmit}
-                  className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg"
-                >
-                  Continue to Seats
-                </button>
-              </div>
-            </div>
-          )}
 
-          {step === 2 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">{flight.from} → {flight.to} Seat Selection</h2>
-              <SeatMap
-                flightId={flight._id}
-                passengers={passengers}
-                selectedSeats={selectedSeats}
-                onSeatSelect={setSelectedSeats}
-                isAutoSelect={isAutoSelect}
-                setIsAutoSelect={setIsAutoSelect}
-              />
+              <FlightSummaryCard flight={flight} searchParams={searchParams} />
 
               {tripType === "round-trip" && returnFlight && (
-                <div className="mt-8 border-t pt-8">
-                  <h2 className="text-xl font-semibold mb-4">{returnFlight.from} → {returnFlight.to} Seat Selection</h2>
-                  <SeatMap
-                    flightId={returnFlight._id}
-                    passengers={passengers}
-                    selectedSeats={returnSelectedSeats}
-                    onSeatSelect={setReturnSelectedSeats}
-                    isAutoSelect={isReturnAutoSelect}
-                    setIsAutoSelect={setIsReturnAutoSelect}
-                  />
+                <div className="mt-8">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-3 uppercase tracking-tight">Return Flight</h3>
+                  <FlightSummaryCard flight={returnFlight} searchParams={searchParams} />
                 </div>
               )}
 
-              <div className="mt-6 flex justify-between">
+              <RefundTimeline price={flight.price} />
+
+              <RefundableUpsell
+                price={flight.price}
+                isSelected={refundableSelected}
+                onSelect={() => setRefundableSelected(!refundableSelected)}
+              />
+
+              <InsuranceUpsell
+                isSelected={insuranceSelected}
+                onSelect={setInsuranceSelected}
+              />
+
+              <BaggageProtectionUpsell
+                isSelected={baggageSelected}
+                onSelect={setBaggageSelected}
+              />
+
+              <TravellerDetailsForm
+                passengers={passengers}
+                onPassengerChange={handlePassengerChange}
+              />
+
+              <ContactInfoForm
+                mobile={mobile}
+                email={email}
+                onMobileChange={setMobile}
+                onEmailChange={setEmail}
+                useGstin={useGstin}
+                onUseGstinToggle={setUseGstin}
+                gstin={gstin}
+                onGstinChange={setGstin}
+                gstHolderName={gstHolderName}
+                onGstHolderNameChange={setGstHolderName}
+                gstAddress={gstAddress}
+                onGstAddressChange={setGstAddress}
+                gstPincode={gstPincode}
+                onGstPincodeChange={setGstPincode}
+                saveGst={saveGst}
+                onSaveGstToggle={setSaveGst}
+              />
+
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 flex justify-end">
                 <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50"
+                  onClick={handleDetailsSubmit}
+                  className="px-12 py-3 bg-red-500 hover:bg-red-600 text-white font-black uppercase tracking-widest rounded-xl shadow-lg shadow-red-100 transition-all active:scale-95"
                 >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSeatSelectionComplete}
-                  className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg"
-                >
-                  Continue to Review
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div>
-              <h2 className="text-xl font-semibold mb-4">Review & Add-ons</h2>
-
-              {/* In-flight Services */}
-              <div className="mb-8">
-                <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
-                  <span>🍽️</span> In-flight Services
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {AVAILABLE_ADDONS.map(addon => (
-                    <div
-                      key={addon.id}
-                      onClick={() => toggleAddon(addon)}
-                      className={`cursor-pointer border-2 rounded-xl p-4 flex items-center justify-between transition-all ${selectedAddons.find(a => a.id === addon.id)
-                        ? "border-red-500 bg-red-50"
-                        : "border-gray-100 hover:border-gray-200"
-                        }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{addon.icon}</span>
-                        <div>
-                          <p className="font-semibold text-gray-900">{addon.name}</p>
-                          <p className="text-xs text-gray-500">Per passenger</p>
-                        </div>
-                      </div>
-                      <span className="font-bold text-gray-900">{formatPrice(addon.price)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Flight Details</h3>
-                  <p className="text-sm text-gray-600">
-                    {flight.airline} • {flight.flightNumber || ""}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {flight.from} → {flight.to}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {formatTime(flight.departureTime)} - {formatTime(flight.arrivalTime)} ({flight.duration})
-                  </p>
-                  {tripType === "round-trip" && returnFlight && (
-                    <div className="mt-2 pt-2 border-t">
-                      <p className="text-sm text-gray-600">
-                        Return: {returnFlight.airline} • {returnFlight.from} → {returnFlight.to}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {formatTime(returnFlight.departureTime)} - {formatTime(returnFlight.arrivalTime)} ({returnFlight.duration})
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Passengers & Seats</h3>
-                  {passengers.map((p, i) => (
-                    <div key={i} className="text-sm text-gray-600 flex justify-between">
-                      <span>{p.name} (Age: {p.age})</span>
-                      <span>
-                        Seat: <strong>{isAutoSelect ? "Auto" : (selectedSeats[i] || "None")}</strong>
-                        {tripType === "round-trip" && ` | Return: ${isReturnAutoSelect ? "Auto" : (returnSelectedSeats[i] || "None")}`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <h3 className="font-semibold mb-2">Price Breakdown</h3>
-                  <div className="space-y-1 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Base Fare ({passengers.length} pax)</span>
-                      <span>{formatPrice(flight.price * passengers.length)}</span>
-                    </div>
-                    {tripType === "round-trip" && returnFlight && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Base Fare (Return)</span>
-                        <span>{formatPrice(returnFlight.price * passengers.length)}</span>
-                      </div>
-                    )}
-
-                    {/* Seat Premiums */}
-                    {((!isAutoSelect && selectedSeats.length > 0) || (tripType === "round-trip" && !isReturnAutoSelect && returnSelectedSeats.length > 0)) && (
-                      <div className="flex justify-between text-blue-600">
-                        <span className="text-gray-600 italic">Seat Selection Premium</span>
-                        <span>{formatPrice(
-                          (!isAutoSelect ? selectedSeats.reduce((sum, s) => sum + (s.includes('A') || s.includes('F') ? 499 : (s.includes('C') || s.includes('D') ? 299 : 99)), 0) : 0) +
-                          (tripType === "round-trip" && !isReturnAutoSelect ? returnSelectedSeats.reduce((sum, s) => sum + (s.includes('A') || s.includes('F') ? 499 : (s.includes('C') || s.includes('D') ? 299 : 99)), 0) : 0)
-                        )}</span>
-                      </div>
-                    )}
-
-                    {/* Add-ons */}
-                    {selectedAddons.length > 0 && selectedAddons.map(addon => (
-                      <div key={addon.id} className="flex justify-between text-green-600">
-                        <span className="text-gray-600 italic">{addon.name} x {passengers.length}</span>
-                        <span>{formatPrice(addon.price * passengers.length)}</span>
-                      </div>
-                    ))}
-
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Taxes ({passengers.length} pax)</span>
-                      <span>{formatPrice(Math.round((total - (199 * passengers.length)) * 0.15))}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Convenience Fee</span>
-                      <span>{formatPrice(199 * passengers.length)}</span>
-                    </div>
-                    <div className="flex justify-between font-semibold text-lg pt-2 border-t text-gray-900">
-                      <span>Total</span>
-                      <span className="text-red-600">{formatPrice(calculateTotal())}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {error && <p className="text-red-600 mt-4">{error}</p>}
-              <div className="mt-6 flex justify-between">
-                <button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  className="px-6 py-2.5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={handlePayment}
-                  disabled={loading}
-                  className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg disabled:opacity-50"
-                >
-                  {loading ? "Processing..." : "Proceed to Payment"}
+                  Continue
                 </button>
               </div>
             </div>
-          )}
 
-          {step === 4 && (
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            {/* Sidebar */}
+            <FareSidebar
+              flight={flight}
+              passengersCount={passengers.length}
+              selectedPromo={selectedPromo}
+              onPromoSelect={setSelectedPromo}
+              insuranceSelected={insuranceSelected}
+              baggageSelected={baggageSelected}
+              refundableSelected={refundableSelected}
+            />
+          </div>
+        )}
+
+        {step === 2 && (
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <h2 className="text-2xl font-black text-gray-900 mb-8 uppercase tracking-tight">{flight.from} → {flight.to} Seat Selection</h2>
+            <SeatMap
+              flightId={flight._id}
+              passengers={passengers}
+              selectedSeats={selectedSeats}
+              onSeatSelect={setSelectedSeats}
+              isAutoSelect={isAutoSelect}
+              setIsAutoSelect={setIsAutoSelect}
+            />
+
+            {tripType === "round-trip" && returnFlight && (
+              <div className="mt-12 border-t border-slate-100 pt-12">
+                <h2 className="text-2xl font-black text-gray-900 mb-8 uppercase tracking-tight">{returnFlight.from} → {returnFlight.to} Seat Selection</h2>
+                <SeatMap
+                  flightId={returnFlight._id}
+                  passengers={passengers}
+                  selectedSeats={returnSelectedSeats}
+                  onSeatSelect={setReturnSelectedSeats}
+                  isAutoSelect={isReturnAutoSelect}
+                  setIsAutoSelect={setIsReturnAutoSelect}
+                />
+              </div>
+            )}
+
+            <div className="mt-12 flex justify-between pt-8 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="px-8 py-3 bg-slate-100 text-slate-600 font-black uppercase tracking-widest rounded-xl hover:bg-slate-200 transition-all"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={handleSeatSelectionComplete}
+                className="px-12 py-3 bg-red-500 hover:bg-red-600 text-white font-black uppercase tracking-widest rounded-xl shadow-lg shadow-red-100 transition-all active:scale-95"
+              >
+                Confirm & Pay
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="bg-white rounded-2xl shadow-xl p-12 text-center max-w-2xl mx-auto">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 className="text-3xl font-black text-gray-900 mb-4 uppercase tracking-tighter">Booking Confirmed!</h2>
+            <p className="text-gray-500 font-medium mb-8">Your flight ticket has been successfully booked and sent to your email.</p>
+
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 mb-8">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Booking Reference</p>
+              <p className="text-2xl font-black text-red-500 tracking-tighter">{bookingRef}</p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <button
+                type="button"
+                onClick={() => generateTicket({
+                  ...createdBooking,
+                  flightDetails: flight,
+                  passengers: passengers.map((p, i) => ({
+                    name: `${p.title} ${p.firstName} ${p.lastName}`,
+                    age: p.age || 25,
+                    seatNumber: isAutoSelect ? "Auto-selected" : selectedSeats[i]
+                  })),
+                  addons: selectedAddons,
+                  tripType: tripType
+                }, 'flight')}
+                className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest rounded-xl flex items-center justify-center gap-3 shadow-xl shadow-blue-100 transition-all active:scale-95"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
-              <p className="text-gray-600 mb-4">Your flight booking has been confirmed.</p>
-              <p className="text-lg font-semibold text-gray-900 mb-6">
-                Booking Reference: <span className="text-red-500">{bookingRef}</span>
-              </p>
-              <div className="flex gap-4 justify-center">
-                <button
-                  type="button"
-                  onClick={() => generateTicket({
-                    ...createdBooking,
-                    flightDetails: flight,
-                    passengers: passengers.map((p, i) => ({
-                      name: p.name,
-                      age: p.age,
-                      seatNumber: isAutoSelect ? "Auto-selected" : selectedSeats[i]
-                    })),
-                    addons: selectedAddons,
-                    tripType: tripType
-                  }, 'flight')}
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg flex items-center gap-2 shadow-lg shadow-blue-200"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  Download Ticket
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/flights")}
-                  className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg"
-                >
-                  Book Another Flight
-                </button>
-              </div>
+                Download Ticket
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/flights")}
+                className="px-8 py-3.5 bg-white border-2 border-slate-200 text-slate-600 font-black uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all active:scale-95"
+              >
+                Book Another Flight
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {createdBooking && (
@@ -486,7 +425,7 @@ const FlightBooking = () => {
           onClose={() => setIsPaymentModalOpen(false)}
           bookingId={createdBooking.id}
           bookingType="flight"
-          amount={total}
+          amount={calculateTotal()}
           onPaymentSuccess={onPaymentSuccess}
         />
       )}

@@ -39,7 +39,7 @@ const HotelDetail = () => {
   const handleBook = (room) => {
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/login", { state: { from: "hotel-booking" } });
+      navigate("/", { state: { from: "hotel-booking" } });
       return;
     }
     navigate("/hotels/booking", {

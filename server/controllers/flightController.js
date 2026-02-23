@@ -31,6 +31,10 @@ exports.searchFlights = async (req, res, next) => {
       maxPrice,
       maxStops,
       refundable,
+      departureTimeFrom,
+      departureTimeTo,
+      arrivalTimeFrom,
+      arrivalTimeTo,
       page = 1,
       limit = 20,
     } = req.query;
@@ -99,6 +103,30 @@ exports.searchFlights = async (req, res, next) => {
     if (maxPrice) flights = flights.filter(f => f.price <= parseInt(maxPrice));
     if (refundable === 'true') flights = flights.filter(f => f.refundable);
 
+    if (departureTimeFrom && departureTimeTo) {
+      flights = flights.filter(f => {
+        const time = (f.departureTime || "").split('T')[1]?.substring(0, 5);
+        if (!time) return false;
+        if (departureTimeFrom <= departureTimeTo) {
+          return time >= departureTimeFrom && time <= departureTimeTo;
+        } else {
+          return time >= departureTimeFrom || time <= departureTimeTo;
+        }
+      });
+    }
+
+    if (arrivalTimeFrom && arrivalTimeTo) {
+      flights = flights.filter(f => {
+        const time = (f.arrivalTime || "").split('T')[1]?.substring(0, 5);
+        if (!time) return false;
+        if (arrivalTimeFrom <= arrivalTimeTo) {
+          return time >= arrivalTimeFrom && time <= arrivalTimeTo;
+        } else {
+          return time >= arrivalTimeFrom || time <= arrivalTimeTo;
+        }
+      });
+    }
+
     // ── Sorting ──
     if (sort === 'price') {
       flights.sort((a, b) => order === 'desc' ? b.price - a.price : a.price - b.price);
@@ -112,6 +140,12 @@ exports.searchFlights = async (req, res, next) => {
       flights.sort((a, b) => {
         const tA = new Date(a.departureTime).getTime();
         const tB = new Date(b.departureTime).getTime();
+        return order === 'desc' ? tB - tA : tA - tB;
+      });
+    } else if (sort === 'arrival') {
+      flights.sort((a, b) => {
+        const tA = new Date(a.arrivalTime).getTime();
+        const tB = new Date(b.arrivalTime).getTime();
         return order === 'desc' ? tB - tA : tA - tB;
       });
     }
@@ -165,6 +199,8 @@ exports._localSearchFlights = async (req, res, next) => {
       passengers = 1, class: flightClass,
       sort = 'price', order = 'asc',
       airline, minPrice, maxPrice, maxStops,
+      departureTimeFrom, departureTimeTo,
+      arrivalTimeFrom, arrivalTimeTo,
       page = 1, limit = 20,
     } = req.query;
 
@@ -192,11 +228,36 @@ exports._localSearchFlights = async (req, res, next) => {
     if (sort === 'price') sortObj.price = order === 'desc' ? -1 : 1;
     else if (sort === 'duration') sortObj.duration = 1;
     else if (sort === 'departure') sortObj.departureTime = order === 'desc' ? -1 : 1;
+    else if (sort === 'arrival') sortObj.arrivalTime = order === 'desc' ? -1 : 1;
     else sortObj.price = 1;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const flights = await Flight.find(query).sort(sortObj).skip(skip).limit(parseInt(limit)).lean();
     const total = await Flight.countDocuments(query);
+
+    if (departureTimeFrom && departureTimeTo) {
+      flights = flights.filter(f => {
+        const time = (f.departureTime || "").split('T')[1]?.substring(0, 5);
+        if (!time) return false;
+        if (departureTimeFrom <= departureTimeTo) {
+          return time >= departureTimeFrom && time <= departureTimeTo;
+        } else {
+          return time >= departureTimeFrom || time <= departureTimeTo;
+        }
+      });
+    }
+
+    if (arrivalTimeFrom && arrivalTimeTo) {
+      flights = flights.filter(f => {
+        const time = (f.arrivalTime || "").split('T')[1]?.substring(0, 5);
+        if (!time) return false;
+        if (arrivalTimeFrom <= arrivalTimeTo) {
+          return time >= arrivalTimeFrom && time <= arrivalTimeTo;
+        } else {
+          return time >= arrivalTimeFrom || time <= arrivalTimeTo;
+        }
+      });
+    }
 
     const response = { success: true, flights, pagination: { page: parseInt(page), limit: parseInt(limit), total, pages: Math.ceil(total / parseInt(limit)) } };
 

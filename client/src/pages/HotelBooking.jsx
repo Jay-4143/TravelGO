@@ -53,6 +53,7 @@ const HotelBooking = () => {
   const handleReview = () => {
     if (guestNames.some((g) => !g.name)) {
       toast.error('Please fill all guest names.');
+
       return;
     }
     setStep(2);

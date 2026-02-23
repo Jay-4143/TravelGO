@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { HiSearch } from "react-icons/hi";
-import { FaCalendarAlt, FaUser, FaChevronDown } from "react-icons/fa";
+import { FaCalendarAlt, FaUser, FaChevronDown, FaMapMarkerAlt } from "react-icons/fa";
 import CalendarComponent from "./CalendarComponent";
+import CityDropdown from "./CityDropdown";
 
 const CITIES = [
   "Mumbai", "New Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad",
@@ -72,50 +73,36 @@ const HotelSearch = ({ onSearch }) => {
           <div className="flex items-end gap-0 flex-wrap">
             <div className="flex-1 min-w-[200px] relative border-r border-gray-200 pr-4" ref={cityRef}>
               <label className="block text-xs font-medium text-gray-500 mb-1">City</label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={cityDropdownOpen ? citySearch : city}
-                  onChange={(e) => {
-                    setCitySearch(e.target.value);
-                    setCityDropdownOpen(true);
-                  }}
-                  onFocus={() => {
-                    setCitySearch(city);
-                    setCityDropdownOpen(true);
-                  }}
-                  placeholder="Search city..."
-                  className="w-full text-lg font-bold text-gray-900 bg-transparent border-none outline-none pr-8"
-                />
-                <button
-                  type="button"
-                  onClick={() => setCityDropdownOpen(!cityDropdownOpen)}
-                  className="absolute right-0 top-0"
-                >
-                  <FaChevronDown className="w-3 h-3 text-gray-400" />
-                </button>
-              </div>
-              {cityDropdownOpen && (
-                <div className="absolute z-50 bg-white rounded-lg shadow-xl border border-gray-200 mt-2 w-full max-h-60 overflow-y-auto left-0 min-w-[220px]">
-                  {CITIES.filter((c) => c.toLowerCase().includes((citySearch || "").toLowerCase()))
-                    .filter((c, i, arr) => arr.indexOf(c) === i) // deduplicate
-                    .slice(0, 15)
-                    .map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => {
-                          setCity(c);
-                          setCitySearch("");
-                          setCityDropdownOpen(false);
-                        }}
-                        className="w-full text-left px-4 py-2 hover:bg-blue-50 text-gray-700 text-sm"
-                      >
-                        {c}
-                      </button>
-                    ))}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setCityDropdownOpen(!cityDropdownOpen);
+                  setCalendarOpen(false);
+                  setGuestsDropdownOpen(false);
+                }}
+                className="w-full text-left focus:outline-none"
+              >
+                <div className="text-lg font-bold text-gray-900 truncate">{city || "Select City"}</div>
+                <div className="text-[10px] text-gray-400 font-bold uppercase">Destination</div>
+              </button>
+
+              {/* Anchored City Dropdown */}
+              <CityDropdown
+                isOpen={cityDropdownOpen}
+                onClose={() => setCityDropdownOpen(false)}
+                onSelect={(val) => {
+                  const cityName = val.split(' (')[0];
+                  setCity(cityName);
+                  setCityDropdownOpen(false);
+                  setTimeout(() => {
+                    setActiveField("departure"); // Maps to Check-in
+                    setCalendarOpen(true);
+                  }, 150);
+                }}
+                position={{ top: 0, left: 0 }}
+                className="w-full"
+                type="hotels"
+              />
             </div>
 
             <div className="flex-1 min-w-[200px] relative border-r border-gray-200 pl-4 pr-4">
@@ -188,43 +175,55 @@ const HotelSearch = ({ onSearch }) => {
                 </div>
               </button>
               {guestsDropdownOpen && (
-                <div className="absolute z-50 bg-white rounded-lg shadow-xl border border-gray-200 mt-2 p-4 min-w-[250px]">
-                  <div className="space-y-4">
+                <div className="absolute z-50 bg-white rounded-2xl shadow-2xl border border-slate-100 p-6 min-w-[300px] right-0 top-0 animate-in fade-in zoom-in duration-200">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Select Guests</h3>
+                    <button onClick={() => setGuestsDropdownOpen(false)} className="text-slate-400 hover:text-red-500 transition-colors">
+                      <FaChevronDown className="w-3 h-3 rotate-180" />
+                    </button>
+                  </div>
+                  <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Guests</span>
-                      <div className="flex items-center gap-3">
+                      <div>
+                        <span className="block text-sm font-bold text-slate-700">Guests</span>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold">Total passengers</span>
+                      </div>
+                      <div className="flex items-center gap-4">
                         <button
                           type="button"
                           onClick={() => setGuests(Math.max(1, guests - 1))}
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                          className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center hover:bg-blue-50 hover:border-blue-200 transition-all text-lg font-bold"
                         >
                           -
                         </button>
-                        <span className="w-8 text-center font-semibold">{guests}</span>
+                        <span className="w-6 text-center text-base font-black text-slate-800">{guests}</span>
                         <button
                           type="button"
                           onClick={() => setGuests(guests + 1)}
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                          className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center hover:bg-blue-50 hover:border-blue-200 transition-all text-lg font-bold text-blue-600"
                         >
                           +
                         </button>
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">Rooms</span>
-                      <div className="flex items-center gap-3">
+                      <div>
+                        <span className="block text-sm font-bold text-slate-700">Rooms</span>
+                        <span className="text-[10px] text-slate-400 uppercase font-bold">Number of rooms</span>
+                      </div>
+                      <div className="flex items-center gap-4">
                         <button
                           type="button"
                           onClick={() => setRooms(Math.max(1, rooms - 1))}
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                          className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center hover:bg-gray-50 hover:bg-blue-50 hover:border-blue-200 transition-all text-lg font-bold"
                         >
                           -
                         </button>
-                        <span className="w-8 text-center font-semibold">{rooms}</span>
+                        <span className="w-6 text-center text-base font-black text-slate-800">{rooms}</span>
                         <button
                           type="button"
                           onClick={() => setRooms(rooms + 1)}
-                          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50"
+                          className="w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center hover:bg-blue-50 hover:border-blue-200 transition-all text-lg font-bold text-blue-600"
                         >
                           +
                         </button>
@@ -233,9 +232,9 @@ const HotelSearch = ({ onSearch }) => {
                     <button
                       type="button"
                       onClick={() => setGuestsDropdownOpen(false)}
-                      className="w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg"
+                      className="w-full py-3 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl transition-all shadow-lg hover:shadow-red-200 uppercase tracking-widest text-xs"
                     >
-                      Apply
+                      Apply Selection
                     </button>
                   </div>
                 </div>
@@ -272,17 +271,28 @@ const HotelSearch = ({ onSearch }) => {
             </div>
           </div>
 
-          <div className="absolute left-0 right-0 top-full pt-2">
-            <CalendarComponent
-              isOpen={calendarOpen}
-              onClose={() => setCalendarOpen(false)}
-              departureDate={checkIn}
-              returnDate={checkOut}
-              activeField={activeField}
-              onSelectDeparture={setCheckIn}
-              onSelectReturn={setCheckOut}
-              isRoundTrip={true}
-            />
+          {/* Anchored Calendar Panel */}
+          <div className="absolute left-0 right-0 top-0 bottom-0 pointer-events-none z-[100]">
+            <div className="relative w-full h-full">
+              <CalendarComponent
+                isOpen={calendarOpen}
+                onClose={() => setCalendarOpen(false)}
+                departureDate={checkIn}
+                returnDate={checkOut}
+                activeField={activeField === 'checkIn' ? 'departure' : 'return'}
+                onSelectDeparture={(d) => {
+                  setCheckIn(d);
+                  setActiveField("checkOut");
+                }}
+                onSelectReturn={(d) => {
+                  setCheckOut(d);
+                  setCalendarOpen(false);
+                  setTimeout(() => setGuestsDropdownOpen(true), 150);
+                }}
+                isRoundTrip={true}
+                className="pointer-events-auto mt-0"
+              />
+            </div>
           </div>
         </div>
       </div>

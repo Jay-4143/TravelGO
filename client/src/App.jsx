@@ -1,12 +1,12 @@
-import { BrowserRouter as Router, Routes, Route, useParams, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useParams, Link, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import Navbar from './components/Navbar';
+import ScrollToTop from './components/ScrollToTop';
 import Flights from './pages/Flights';
 import FlightBooking from './pages/FlightBooking';
 import Hotels from './pages/Hotels';
 import HotelDetail from './pages/HotelDetail';
 import HotelBooking from './pages/HotelBooking';
-import Login from './pages/Login';
-import Register from './pages/Register';
 
 import VisaPage from './pages/VisaPage';
 import VisaDetails from './pages/VisaDetails';
@@ -39,6 +39,14 @@ import { GlobalProvider } from './context/GlobalContext';
 import Footer from './components/Footer';
 import { Toaster } from 'react-hot-toast';
 
+const LocationLogger = () => {
+  const location = useLocation();
+  useEffect(() => {
+    console.log("[App] Current Location:", location.pathname, location.state);
+  }, [location]);
+  return null;
+};
+
 /* Coming Soon placeholder for Cruise & Cabs */
 const ComingSoon = () => {
   const { page } = useParams();
@@ -66,14 +74,16 @@ function App() {
       <GlobalProvider>
         <Toaster position="top-right" toastOptions={{ duration: 3000, style: { borderRadius: '10px', fontFamily: 'sans-serif' } }} />
         <Router>
+          <ScrollToTop />
           <Navbar />
+          <LocationLogger />
           <Routes>
             <Route path="/" element={<Flights />} />
             <Route path="/flights" element={<Flights />} />
             <Route path="/flights/booking" element={<FlightBooking />} />
             <Route path="/hotels" element={<Hotels />} />
-            <Route path="/hotels/:id" element={<HotelDetail />} />
             <Route path="/hotels/booking" element={<HotelBooking />} />
+            <Route path="/hotels/:id" element={<HotelDetail />} />
             <Route path="/visa" element={<VisaPage />} />
             <Route path="/visa/:id" element={<VisaDetails />} />
             <Route path="/visa/:id/apply" element={<VisaApplication />} />
@@ -83,8 +93,8 @@ function App() {
             <Route path="/packages/:id" element={<PackageDetails />} />
             <Route path="/services" element={<Services />} />
             <Route path="/services/:slug" element={<Services />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/login" element={<Flights />} />
+            <Route path="/register" element={<Flights />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/cruise" element={<Cruises />} />

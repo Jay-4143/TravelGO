@@ -11,6 +11,7 @@ import WhyBookHotels from "../components/WhyBookHotels";
 import Reviews from "../components/Reviews";
 import Footer from "../components/Footer";
 import { searchHotels } from "../api/hotels";
+import ServicesStrip from "../components/ServicesStrip";
 
 const Hotels = () => {
   const location = useLocation();
@@ -69,13 +70,16 @@ const Hotels = () => {
         limit: 12,
         ...filters,
       };
+      console.log("[Hotels] Running Search:", req);
       searchHotels(req)
         .then((res) => {
+          console.log("[Hotels] Search Success:", res.data);
           setHotels(res.data.hotels || []);
           setPagination(res.data.pagination || null);
           setSearchParams(params);
         })
         .catch((err) => {
+          console.error("[Hotels] Search Error:", err);
           setError(err.response?.data?.message || "Search failed.");
           setHotels([]);
           setPagination(null);
@@ -111,28 +115,33 @@ const Hotels = () => {
     [searchParams, filterParams, runSearch]
   );
 
+  /* ── Simple Local Error Boundary ── */
+  if (error) {
+    console.log("[Hotels] Rendering with error state:", error);
+  }
+
   return (
     <>
       <div ref={searchBarRef}>
         <HotelSearch onSearch={handleSearch} />
       </div>
+
+      {!searchParams && <ServicesStrip />}
       {searchParams && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col lg:flex-row gap-8">
             <HotelFilters
               filterParams={filterParams}
               onFilterChange={handleFilterChange}
-              showFilters={true} // Simplification: Manage toggle state inside Hotels or pass it dwon
-              setShowFilters={() => { }}
             />
             <div className="flex-1 min-w-0">
               {error && (
                 <div className="mb-4">
-                  <p className="text-red-600 bg-red-50 rounded-lg p-3 text-sm">{error}</p>
+                  <p className="text-red-600 bg-red-50 rounded-lg p-3 text-sm">{error || "An unexpected error occurred."}</p>
                 </div>
               )}
               <HotelResults
-                hotels={hotels}
+                hotels={hotels || []}
                 searchParams={searchParams}
                 filterParams={filterParams}
                 pagination={pagination}

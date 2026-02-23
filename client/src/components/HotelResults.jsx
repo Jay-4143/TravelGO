@@ -161,7 +161,7 @@ const HotelResults = ({
         /* ── List View ── */
         <>
           <div className="space-y-4">
-            {hotels.map((hotel) => (
+            {hotels && hotels.filter(h => h && h._id).map((hotel) => (
               <HotelCard key={hotel._id} hotel={hotel} searchParams={searchParams} onViewDetails={handleViewDetails} />
             ))}
           </div>

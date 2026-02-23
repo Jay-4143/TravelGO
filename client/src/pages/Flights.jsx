@@ -50,43 +50,59 @@ const SearchSummaryBar = ({ searchParams, onModify }) => {
     <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white sticky top-0 z-40 shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-0 py-3">
-          {/* From */}
-          <div className="flex-1 border-r border-white/20 pr-4">
-            <p className="text-[10px] uppercase tracking-wider text-green-400 font-medium">From</p>
-            <p className="text-lg font-bold leading-tight">{searchParams.fromCity || searchParams.from}</p>
-            <p className="text-xs text-gray-400 truncate">
-              {searchParams.from}, {searchParams.fromCity || ""}
-            </p>
-          </div>
-
-          <div className="px-3">
-            <FaExchangeAlt className="w-4 h-4 text-gray-400" />
-          </div>
-
-          {/* To */}
-          <div className="flex-1 border-r border-white/20 px-4">
-            <p className="text-[10px] uppercase tracking-wider text-green-400 font-medium">To</p>
-            <p className="text-lg font-bold leading-tight">{searchParams.toCity || searchParams.to}</p>
-            <p className="text-xs text-gray-400 truncate">
-              {searchParams.to}, {searchParams.toCity || ""}
-            </p>
-          </div>
-
-          {/* Departure */}
-          <div className="flex-1 border-r border-white/20 px-4">
-            <p className="text-[10px] uppercase tracking-wider text-green-400 font-medium">Departure</p>
-            <p className="text-lg font-bold leading-tight">{formatDate(searchParams.departureDate)}</p>
-            <p className="text-xs text-gray-400">{getDayName(searchParams.departureDate)}</p>
-          </div>
-
-          {/* Return (if round-trip) */}
-          {searchParams.tripType === "round-trip" && searchParams.returnDate && (
-            <div className="flex-1 border-r border-white/20 px-4">
-              <p className="text-[10px] uppercase tracking-wider text-green-400 font-medium">Return</p>
-              <p className="text-lg font-bold leading-tight">{formatDate(searchParams.returnDate)}</p>
-              <p className="text-xs text-gray-400">{getDayName(searchParams.returnDate)}</p>
+          {searchParams.tripType === "multi-city" ? (
+            <div className="flex-1 px-4 border-r border-white/20">
+              <p className="text-[10px] uppercase tracking-wider text-green-400 font-medium">Multi-City Search</p>
+              <p className="text-lg font-bold leading-tight">
+                {searchParams.segments?.[0]?.from} → ... → {searchParams.segments?.[searchParams.segments.length - 1]?.to}
+              </p>
+              <p className="text-xs text-gray-400">
+                {searchParams.segments?.length} Segments
+              </p>
             </div>
+          ) : (
+            <>
+              {/* From */}
+              <div className="flex-1 border-r border-white/20 pr-4">
+                <p className="text-[10px] uppercase tracking-wider text-green-400 font-medium">From</p>
+                <p className="text-lg font-bold leading-tight">{searchParams.fromCity || searchParams.from}</p>
+                <p className="text-xs text-gray-400 truncate">
+                  {searchParams.from}, {searchParams.fromCity || ""}
+                </p>
+              </div>
+
+              <div className="px-3">
+                <FaExchangeAlt className="w-4 h-4 text-gray-400" />
+              </div>
+
+              {/* To */}
+              <div className="flex-1 border-r border-white/20 px-4">
+                <p className="text-[10px] uppercase tracking-wider text-green-400 font-medium">To</p>
+                <p className="text-lg font-bold leading-tight">{searchParams.toCity || searchParams.to}</p>
+                <p className="text-xs text-gray-400 truncate">
+                  {searchParams.to}, {searchParams.toCity || ""}
+                </p>
+              </div>
+
+              {/* Departure */}
+              <div className="flex-1 border-r border-white/20 px-4">
+                <p className="text-[10px] uppercase tracking-wider text-green-400 font-medium">Departure</p>
+                <p className="text-lg font-bold leading-tight">{formatDate(searchParams.departureDate)}</p>
+                <p className="text-xs text-gray-400">{getDayName(searchParams.departureDate)}</p>
+              </div>
+
+              {/* Return (if round-trip) */}
+              {searchParams.tripType === "round-trip" && searchParams.returnDate && (
+                <div className="flex-1 border-r border-white/20 px-4">
+                  <p className="text-[10px] uppercase tracking-wider text-green-400 font-medium">Return</p>
+                  <p className="text-lg font-bold leading-tight">{formatDate(searchParams.returnDate)}</p>
+                  <p className="text-xs text-gray-400">{getDayName(searchParams.returnDate)}</p>
+                </div>
+              )}
+            </>
           )}
+
+          {/* Travellers */}
 
           {/* Travellers */}
           <div className="flex-1 px-4">
@@ -130,7 +146,8 @@ const Flights = () => {
   const [returnFlights, setReturnFlights] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showHero, setShowHero] = useState(true);
+  const [showHero, setShowHero] = useState(!(location.state?.from || location.state?.departureDate));
+  const [isModifying, setIsModifying] = useState(false);
   const resultsRef = useRef(null);
 
   const runSearch = useCallback(
@@ -162,6 +179,7 @@ const Flights = () => {
           setReturnFlights(res.data.returnFlights || []);
           setSearchParams(params);
           setShowHero(false); // Hide full Hero, show compact bar
+          setIsModifying(false); // Hide modify widget if open
         })
         .catch((err) => {
           setError(err.response?.data?.message || "Search failed.");
@@ -177,25 +195,29 @@ const Flights = () => {
     (params) => {
       setSearchParams(params);
       runSearch(params, filterParams, sort, order);
+      setIsModifying(false);
     },
     [runSearch, filterParams, sort, order]
   );
 
   useEffect(() => {
-    const { from, to } = location.state || {};
-    if (from && to && !searchExecuted.current) {
-      searchExecuted.current = true;
-      const today = new Date().toISOString().slice(0, 10);
-      handleSearch({
-        from,
-        to,
-        departureDate: today,
-        adults: 1,
-        children: 0,
-        infants: 0,
-        travelClass: "economy",
-        tripType: "one-way"
-      });
+    const { from, to, departureDate, adults, children, infants, travelClass, tripType, segments, isModifying: modifyTrigger } = location.state || {};
+    if (!searchExecuted.current) {
+      if ((from && to) || (tripType === "multi-city" && segments)) {
+        searchExecuted.current = true;
+        if (modifyTrigger) setIsModifying(true);
+        handleSearch({
+          from,
+          to,
+          departureDate: departureDate || (tripType !== "multi-city" ? new Date().toISOString().split('T')[0] : undefined),
+          adults: adults || 1,
+          children: children || 0,
+          infants: infants || 0,
+          travelClass: travelClass || "economy",
+          tripType: tripType || "one-way",
+          segments: segments
+        });
+      }
     }
   }, [location.state, handleSearch]);
 
@@ -204,7 +226,15 @@ const Flights = () => {
     (next) => {
       const newFilters = { ...filterParams, ...next };
       setFilterParams(newFilters);
-      if (searchParams) runSearch(searchParams, newFilters, sort, order);
+
+      // Calculate NEW search params locally to avoid stale state issues in runSearch
+      let updatedParams = searchParams;
+      if (next.departureDate && searchParams) {
+        updatedParams = { ...searchParams, departureDate: next.departureDate };
+        setSearchParams(updatedParams);
+      }
+
+      if (updatedParams) runSearch(updatedParams, newFilters, sort, order);
     },
     [searchParams, filterParams, runSearch, sort, order]
   );
@@ -222,7 +252,7 @@ const Flights = () => {
     (flight, returnFlight) => {
       const token = localStorage.getItem("token");
       if (!token) {
-        navigate("/login", { state: { from: "flight-booking" } });
+        navigate("/", { state: { from: "flight-booking" } });
         return;
       }
       navigate("/flights/booking", {
@@ -238,19 +268,26 @@ const Flights = () => {
   );
 
   const handleModifySearch = () => {
-    setShowHero(true);
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    setIsModifying(!isModifying);
   };
 
   return (
     <>
       {/* Show full Hero when no results OR when user clicks Modify Search */}
-      {showHero && <Hero onSearch={handleSearch} />}
+      {showHero && <Hero onSearch={handleSearch} initialParams={searchParams} />}
 
       {/* Show compact summary bar when results are visible and Hero is hidden */}
       {!showHero && searchParams && (
-        <SearchSummaryBar searchParams={searchParams} onModify={handleModifySearch} />
+        <div className="sticky top-0 z-[100] bg-white shadow-md">
+          <SearchSummaryBar searchParams={searchParams} onModify={handleModifySearch} />
+          {isModifying && (
+            <div className="bg-slate-900/50 backdrop-blur-sm p-4 animate-in slide-in-from-top duration-300">
+              <div className="max-w-7xl mx-auto">
+                <Hero onSearch={handleSearch} isInline={true} initialParams={searchParams} />
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ServicesStrip only when full Hero is visible */}

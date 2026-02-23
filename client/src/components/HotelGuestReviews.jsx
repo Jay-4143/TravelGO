@@ -289,7 +289,7 @@ const HotelGuestReviews = ({ hotelId, hotelRating = 0, reviewCount = 0 }) => {
                 ) : (
                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
                         <p className="text-gray-700 font-medium mb-2">Want to share your experience?</p>
-                        <button type="button" onClick={() => navigate("/login", { state: { from: "hotel-review" } })}
+                        <button type="button" onClick={() => navigate("/", { state: { from: "hotel-review" } })}
                             className="px-6 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg font-semibold transition-colors">
                             Login to Write a Review
                         </button>

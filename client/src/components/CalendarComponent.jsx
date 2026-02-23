@@ -34,6 +34,8 @@ const CalendarComponent = ({
   onSelectDeparture,
   onSelectReturn,
   isRoundTrip,
+  className = "",
+  style = {}
 }) => {
   const panelRef = useRef(null);
   const dep = parseDate(departureDate);
@@ -116,7 +118,15 @@ const CalendarComponent = ({
   return (
     <div
       ref={panelRef}
-      className="absolute left-1/2 -translate-x-1/2 top-0 z-[80] w-[calc(100%-1rem)] max-w-[780px] bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden"
+      className={`absolute z-[100] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 ${className}`}
+      style={{
+        left: '50%',
+        transform: 'translateX(-50%)',
+        top: '8px',
+        width: 'calc(100% - 1rem)',
+        maxWidth: '780px',
+        ...style
+      }}
     >
       {/* Header: DEPARTURE ... RETURN ... */}
       <div className="flex items-center justify-between px-4 sm:px-5 py-2.5 border-b border-gray-200 bg-white">
@@ -189,14 +199,14 @@ const CalendarComponent = ({
                   onClick={() => handleDateClick(day)}
                   disabled={past}
                   className={`relative h-10 sm:h-11 flex flex-col items-center justify-center rounded-lg transition-colors ${past
-                      ? "text-gray-300 cursor-not-allowed"
-                      : isSelected
-                        ? "bg-blue-600 text-white hover:bg-blue-700"
-                        : inRange
-                          ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
-                          : isWeekend
-                            ? "text-red-600 hover:bg-red-50"
-                            : "text-gray-900 hover:bg-gray-100"
+                    ? "text-gray-300 cursor-not-allowed"
+                    : isSelected
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : inRange
+                        ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
+                        : isWeekend
+                          ? "text-red-600 hover:bg-red-50"
+                          : "text-gray-900 hover:bg-gray-100"
                     }`}
                 >
                   <span className="text-xs font-semibold leading-none">{day.getDate()}</span>
@@ -236,14 +246,14 @@ const CalendarComponent = ({
                   onClick={() => handleDateClick(day)}
                   disabled={past}
                   className={`relative h-10 sm:h-11 flex flex-col items-center justify-center rounded-lg transition-colors ${past
-                      ? "text-gray-300 cursor-not-allowed"
-                      : isSelected
-                        ? "bg-blue-600 text-white hover:bg-blue-700"
-                        : inRange
-                          ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
-                          : isWeekend
-                            ? "text-red-600 hover:bg-red-50"
-                            : "text-gray-900 hover:bg-gray-100"
+                    ? "text-gray-300 cursor-not-allowed"
+                    : isSelected
+                      ? "bg-blue-600 text-white hover:bg-blue-700"
+                      : inRange
+                        ? "bg-blue-100 text-blue-900 hover:bg-blue-200"
+                        : isWeekend
+                          ? "text-red-600 hover:bg-red-50"
+                          : "text-gray-900 hover:bg-gray-100"
                     }`}
                 >
                   <span className="text-xs font-semibold leading-none">{day.getDate()}</span>

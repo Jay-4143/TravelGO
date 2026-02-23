@@ -8,7 +8,8 @@ import {
 import { searchCabs } from '../api/cabs';
 import { useGlobal } from '../context/GlobalContext';
 import Footer from '../components/Footer';
-import SearchableDropdown from '../components/SearchableDropdown';
+import CityDropdown from '../components/CityDropdown';
+import CalendarComponent from '../components/CalendarComponent';
 
 const CITIES = ["Ahmedabad", "Bangalore", "Chennai", "Delhi", "Goa", "Hyderabad", "Kochi", "Kolkata", "Mumbai", "Pune", "Udaipur", "Jaipur", "Amritsar", "Varanasi"];
 
@@ -34,6 +35,12 @@ const Cabs = () => {
 
     // Search State
     const today = new Date().toISOString().split('T')[0];
+
+    // Auto-flow state
+    const [fromDropdownOpen, setFromDropdownOpen] = useState(false);
+    const [toDropdownOpen, setToDropdownOpen] = useState(false);
+    const [calendarOpen, setCalendarOpen] = useState(false);
+    const timeInputRef = useRef(null);
 
     const [searchState, setSearchState] = useState({
         from: params.get('from') || '',
@@ -175,50 +182,109 @@ const Cabs = () => {
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                                    <div className="relative">
-                                        <SearchableDropdown
-                                            label="From City"
-                                            options={CITIES}
-                                            value={searchState.from}
-                                            onChange={(val) => setSearchState({ ...searchState, from: val })}
-                                            placeholder="Select City"
-                                            icon={FaMapMarkerAlt}
-                                            iconColor="text-green-500"
-                                            required
-                                        />
+                                <div className="grid grid-cols-1 md:grid-cols-12 gap-x-8 gap-y-6">
+                                    <div className="md:col-span-3 relative group">
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">From City</label>
+                                        <div className="relative">
+                                            <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-green-500 z-10" />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setFromDropdownOpen(!fromDropdownOpen);
+                                                    setToDropdownOpen(false);
+                                                    setCalendarOpen(false);
+                                                }}
+                                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold outline-none text-left min-h-[58px]"
+                                            >
+                                                {searchState.from || "Select City"}
+                                            </button>
+
+                                            {/* Anchored Dropdown */}
+                                            <CityDropdown
+                                                isOpen={fromDropdownOpen}
+                                                onClose={() => setFromDropdownOpen(false)}
+                                                onSelect={(val) => {
+                                                    const cityName = val.split(' (')[0];
+                                                    setSearchState({ ...searchState, from: cityName });
+                                                    setFromDropdownOpen(false);
+                                                    setTimeout(() => setToDropdownOpen(true), 150);
+                                                }}
+                                                position={{ top: 0, left: 0 }}
+                                                className="w-full"
+                                            />
+                                        </div>
                                     </div>
 
-                                    <div className="relative">
-                                        <SearchableDropdown
-                                            label="Destination"
-                                            options={CITIES}
-                                            value={searchState.to}
-                                            onChange={(val) => setSearchState({ ...searchState, to: val })}
-                                            placeholder="Where to?"
-                                            icon={FaMapMarkerAlt}
-                                            iconColor="text-red-500"
-                                            required={activeTab === 'outstation'}
-                                        />
+                                    <div className="md:col-span-3 relative group">
+                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Destination</label>
+                                        <div className="relative">
+                                            <FaMapMarkerAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-red-500 z-10" />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setToDropdownOpen(!toDropdownOpen);
+                                                    setFromDropdownOpen(false);
+                                                    setCalendarOpen(false);
+                                                }}
+                                                className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold outline-none text-left min-h-[58px]"
+                                            >
+                                                {searchState.to || (activeTab === 'local' ? 'Local Travel' : 'Where to?')}
+                                            </button>
+
+                                            {/* Anchored Dropdown */}
+                                            <CityDropdown
+                                                isOpen={toDropdownOpen}
+                                                onClose={() => setToDropdownOpen(false)}
+                                                onSelect={(val) => {
+                                                    const cityName = val.split(' (')[0];
+                                                    setSearchState({ ...searchState, to: cityName });
+                                                    setToDropdownOpen(false);
+                                                    setTimeout(() => setCalendarOpen(true), 150);
+                                                }}
+                                                position={{ top: 0, left: 0 }}
+                                                className="w-full"
+                                            />
+                                        </div>
                                     </div>
 
-                                    <div className="relative">
+                                    <div className="md:col-span-4 relative">
                                         <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Pickup Date & Time</label>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 relative">
                                             <div className="relative flex-1">
-                                                <FaCalendarAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500" />
-                                                <input
-                                                    type="date"
-                                                    value={searchState.date}
-                                                    min={today}
-                                                    onChange={(e) => setSearchState({ ...searchState, date: e.target.value })}
-                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 min-h-[58px]"
-                                                    required
-                                                />
+                                                <FaCalendarAlt className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500 z-10" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setCalendarOpen(!calendarOpen);
+                                                        setFromDropdownOpen(false);
+                                                        setToDropdownOpen(false);
+                                                    }}
+                                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold outline-none text-left min-h-[58px]"
+                                                >
+                                                    {searchState.date ? new Date(searchState.date).toLocaleDateString() : "Select Date"}
+                                                </button>
+
+                                                {/* Anchored Calendar Panel */}
+                                                <div className="absolute left-0 right-0 top-0 bottom-0 pointer-events-none z-[100] w-screen max-w-none -ml-40 md:-ml-80">
+                                                    <CalendarComponent
+                                                        isOpen={calendarOpen}
+                                                        onClose={() => setCalendarOpen(false)}
+                                                        departureDate={searchState.date}
+                                                        activeField="departure"
+                                                        onSelectDeparture={(d) => {
+                                                            setSearchState({ ...searchState, date: d });
+                                                            setCalendarOpen(false);
+                                                            setTimeout(() => timeInputRef.current?.showPicker(), 150);
+                                                        }}
+                                                        isRoundTrip={false}
+                                                        className="pointer-events-auto mt-0"
+                                                    />
+                                                </div>
                                             </div>
                                             <div className="relative w-32">
                                                 <input
                                                     type="time"
+                                                    ref={timeInputRef}
                                                     value={searchState.time}
                                                     onChange={(e) => setSearchState({ ...searchState, time: e.target.value })}
                                                     className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-4 text-sm font-bold outline-none focus:ring-2 focus:ring-blue-500 min-h-[58px]"
@@ -228,12 +294,12 @@ const Cabs = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-end underline-offset-4">
+                                    <div className="md:col-span-2 flex items-end md:pl-4">
                                         <button
                                             type="submit"
-                                            className="w-full bg-blue-600 hover:bg-slate-900 text-white font-black h-[58px] rounded-2xl shadow-xl shadow-blue-100 uppercase tracking-[0.2em] text-xs transition-all flex items-center justify-center gap-3"
+                                            className="w-full bg-blue-600 hover:bg-slate-900 text-white font-black h-[58px] rounded-2xl shadow-xl shadow-blue-100 uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-3"
                                         >
-                                            <FaSearch /> Find Cabs
+                                            <FaSearch className="w-4 h-4" /> FIND CABS
                                         </button>
                                     </div>
                                 </div>

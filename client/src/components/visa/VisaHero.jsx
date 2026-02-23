@@ -3,6 +3,12 @@ import { getVisaOptions, searchVisas } from '../../api/visaApi';
 import { useNavigate } from 'react-router-dom';
 import { FaSearch, FaPlaneDeparture, FaPassport } from 'react-icons/fa';
 
+const COMMON_NATIONALITIES = [
+    'Indian', 'United Arab Emirates', 'United Kingdom', 'United States',
+    'Canada', 'Australia', 'Saudi Arabia', 'Singapore', 'Thailand',
+    'Malaysia', 'France', 'Germany', 'Italy', 'Spain'
+];
+
 const VisaHero = ({ setSearchResults, setLoading }) => {
     const navigate = useNavigate();
     const [options, setOptions] = useState({ countries: [], visaTypes: [], nationalities: [] });
@@ -42,6 +48,9 @@ const VisaHero = ({ setSearchResults, setLoading }) => {
             setLoading(false);
         }
     };
+
+    // Merge hardcoded common nationalities with those from backend
+    const allNationalities = Array.from(new Set([...COMMON_NATIONALITIES, ...options.nationalities])).sort();
 
     return (
         <div className="relative h-[500px] w-full bg-cover bg-center flex items-center justify-center"
@@ -90,7 +99,7 @@ const VisaHero = ({ setSearchResults, setLoading }) => {
                                 onChange={handleChange}
                                 className="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none"
                             >
-                                {options.nationalities.map(n => (
+                                {allNationalities.map(n => (
                                     <option key={n} value={n}>{n}</option>
                                 ))}
                                 <option value="All">Other</option>

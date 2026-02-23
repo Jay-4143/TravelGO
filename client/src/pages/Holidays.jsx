@@ -8,6 +8,8 @@ import {
     FaMountain, FaCity, FaHotel, FaPassport, FaPlane
 } from 'react-icons/fa';
 import { useGlobal } from '../context/GlobalContext';
+import CityDropdown from '../components/CityDropdown';
+import ServicesStrip from '../components/ServicesStrip';
 
 // ─── Destination Data ──────────────────────────────────────────────────────
 const INTERNATIONAL_DESTINATIONS = [
@@ -65,6 +67,8 @@ const Holidays = () => {
     const [expertSent, setExpertSent] = useState(false);
 
     const tabRef = useRef(null);
+
+    const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
 
     useEffect(() => {
         Promise.all([
@@ -125,7 +129,7 @@ const Holidays = () => {
                 style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1920&q=80)' }}
             >
                 <div className="absolute inset-0 bg-gradient-to-b from-blue-900/70 via-blue-800/60 to-blue-900/80"></div>
-                <div className="relative z-10 w-full max-w-5xl mx-auto px-4 text-center pt-24 pb-16">
+                <div className="relative z-40 w-full max-w-5xl mx-auto px-4 text-center pt-24 pb-16">
                     <p className="text-blue-200 uppercase tracking-widest text-sm font-semibold mb-3">Holidays Made Easy</p>
                     <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-4 leading-tight drop-shadow-lg">
                         Find Your Perfect <span className="text-yellow-400">Holiday Package</span>
@@ -135,15 +139,28 @@ const Holidays = () => {
                     </p>
 
                     {/* Search Bar */}
-                    <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-2xl p-4 md:p-5 flex flex-col md:flex-row gap-3">
+                    <form onSubmit={handleSearch} className="bg-white rounded-2xl shadow-2xl p-4 md:p-5 flex flex-col md:flex-row gap-3 relative z-40">
                         <div className="flex-1 relative">
-                            <FaMapMarkerAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400" />
-                            <input
-                                className="w-full pl-9 pr-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
-                                placeholder="Search destination (e.g., Bali, Kerala)"
-                                name="destination"
-                                value={searchForm.destination}
-                                onChange={e => setSearchForm({ ...searchForm, destination: e.target.value })}
+                            <FaMapMarkerAlt className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-400 z-10" />
+                            <button
+                                type="button"
+                                onClick={() => setCityDropdownOpen(!cityDropdownOpen)}
+                                className="w-full pl-9 pr-3 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700 bg-white text-left min-h-[50px]"
+                            >
+                                {searchForm.destination || "Search destination (e.g., Bali, Kerala)"}
+                            </button>
+
+                            {/* Anchored City Dropdown */}
+                            <CityDropdown
+                                isOpen={cityDropdownOpen}
+                                onClose={() => setCityDropdownOpen(false)}
+                                onSelect={(val) => {
+                                    const cityName = val.split(' (')[0];
+                                    setSearchForm({ ...searchForm, destination: cityName });
+                                    setCityDropdownOpen(false);
+                                }}
+                                position={{ top: 0, left: 0 }}
+                                className="w-full"
                             />
                         </div>
                         <select
@@ -184,6 +201,8 @@ const Holidays = () => {
                     </form>
                 </div>
             </div>
+
+            <ServicesStrip />
 
             {/* ── QUICK CATEGORY PILLS ──────────────────────────────────── */}
             <div className="bg-white border-b shadow-sm sticky top-16 z-30">
