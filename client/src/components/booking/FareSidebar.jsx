@@ -12,6 +12,7 @@ const PROMO_CODES = [
 
 const FareSidebar = ({
     flight,
+    searchParams,
     passengersCount,
     selectedPromo,
     onPromoSelect,
@@ -20,6 +21,15 @@ const FareSidebar = ({
     refundableSelected
 }) => {
     const { formatPrice } = useGlobal();
+    const [showBaseFare, setShowBaseFare] = React.useState(false);
+    const [showTax, setShowTax] = React.useState(false);
+    const [showInsurance, setShowInsurance] = React.useState(false);
+    const [showExtras, setShowExtras] = React.useState(false);
+
+    const adults = searchParams?.adults || 0;
+    const children = searchParams?.children || 0;
+    const infants = searchParams?.infants || 0;
+    const totalPax = adults + children + infants || 1;
 
     const baseFare = flight.price * passengersCount;
     const taxes = Math.round(baseFare * 0.15);
@@ -39,53 +49,144 @@ const FareSidebar = ({
                     <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">{passengersCount} Traveller{passengersCount > 1 ? 's' : ''}</span>
                 </div>
                 <div className="p-5 space-y-4">
-                    <div className="flex justify-between items-center text-xs font-bold text-slate-500">
-                        <div className="flex items-center gap-2 uppercase tracking-widest">
-                            <span className="w-3.5 h-3.5 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px]">+</span> Base Fare
-                        </div>
-                        <span className="text-gray-900">₹{baseFare.toLocaleString('en-IN')}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-xs font-bold text-slate-500">
-                        <div className="flex items-center gap-2 uppercase tracking-widest">
-                            <span className="w-3.5 h-3.5 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px]">+</span> Tax & Charges
-                        </div>
-                        <span className="text-gray-900">₹{taxes.toLocaleString('en-IN')}</span>
-                    </div>
-                    {insurance > 0 && (
-                        <div className="flex justify-between items-center text-xs font-bold text-slate-500">
-                            <div className="flex items-center gap-2 uppercase tracking-widest">
-                                <span className="w-3.5 h-3.5 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px]">+</span> Insurance
+                    {/* Base Fare */}
+                    <div>
+                        <div
+                            className="flex justify-between items-center text-xs font-bold text-slate-500 cursor-pointer group"
+                            onClick={() => setShowBaseFare(!showBaseFare)}
+                        >
+                            <div className="flex items-center gap-2 uppercase tracking-widest group-hover:text-blue-600 transition-colors">
+                                <span className={`w-4 h-4 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px] leading-none ${showBaseFare ? 'bg-slate-800 border-slate-800 text-white' : ''}`}>
+                                    {showBaseFare ? '-' : '+'}
+                                </span>
+                                Base Fare
                             </div>
-                            <span className="text-gray-900">₹{insurance.toLocaleString('en-IN')}</span>
+                            <span className="text-gray-900 font-black">₹{baseFare.toLocaleString('en-IN')}</span>
+                        </div>
+                        {showBaseFare && (
+                            <div className="mt-2 ml-6 space-y-2 animate-fadeIn border-l-2 border-slate-100 pl-4 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                {adults > 0 && (
+                                    <div className="flex justify-between">
+                                        <span>Adult ({adults} X ₹{Math.round(flight.price * 0.85).toLocaleString('en-IN')})</span>
+                                        <span>₹{Math.round(flight.price * 0.85 * adults).toLocaleString('en-IN')}</span>
+                                    </div>
+                                )}
+                                {children > 0 && (
+                                    <div className="flex justify-between">
+                                        <span>Child ({children} X ₹{Math.round(flight.price * 0.85).toLocaleString('en-IN')})</span>
+                                        <span>₹{Math.round(flight.price * 0.85 * children).toLocaleString('en-IN')}</span>
+                                    </div>
+                                )}
+                                {infants > 0 && (
+                                    <div className="flex justify-between">
+                                        <span>Infant ({infants} X ₹{Math.round(flight.price * 0.4).toLocaleString('en-IN')})</span>
+                                        <span>₹{Math.round(flight.price * 0.4 * infants).toLocaleString('en-IN')}</span>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Tax & Charges */}
+                    <div>
+                        <div
+                            className="flex justify-between items-center text-xs font-bold text-slate-500 cursor-pointer group"
+                            onClick={() => setShowTax(!showTax)}
+                        >
+                            <div className="flex items-center gap-2 uppercase tracking-widest group-hover:text-blue-600 transition-colors">
+                                <span className={`w-4 h-4 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px] leading-none ${showTax ? 'bg-slate-800 border-slate-800 text-white' : ''}`}>
+                                    {showTax ? '-' : '+'}
+                                </span>
+                                Tax & Charges
+                            </div>
+                            <span className="text-gray-900 font-black">₹{taxes.toLocaleString('en-IN')}</span>
+                        </div>
+                        {showTax && (
+                            <div className="mt-2 ml-6 space-y-2 animate-fadeIn border-l-2 border-slate-100 pl-4 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                <div className="flex justify-between">
+                                    <span>User Dev. Fee</span>
+                                    <span>₹{(828 * totalPax).toLocaleString('en-IN')}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>K3 Tax</span>
+                                    <span>₹{(1180 * totalPax).toLocaleString('en-IN')}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span>Airline Misc</span>
+                                    <span>₹{(taxes - (828 + 1180) * totalPax).toLocaleString('en-IN')}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Insurance */}
+                    {insurance > 0 && (
+                        <div>
+                            <div
+                                className="flex justify-between items-center text-xs font-bold text-slate-500 cursor-pointer group"
+                                onClick={() => setShowInsurance(!showInsurance)}
+                            >
+                                <div className="flex items-center gap-2 uppercase tracking-widest group-hover:text-blue-600 transition-colors">
+                                    <span className={`w-4 h-4 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px] leading-none ${showInsurance ? 'bg-slate-800 border-slate-800 text-white' : ''}`}>
+                                        {showInsurance ? '-' : '+'}
+                                    </span>
+                                    Insurance
+                                </div>
+                                <span className="text-gray-900 font-black">₹{insurance.toLocaleString('en-IN')}</span>
+                            </div>
+                            {showInsurance && (
+                                <div className="mt-2 ml-6 space-y-2 animate-fadeIn border-l-2 border-slate-100 pl-4 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                                    <div className="flex justify-between">
+                                        <span>Base Premium</span>
+                                        <span>₹{(1690 * totalPax).toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>SGST</span>
+                                        <span>₹{(150 * totalPax).toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>CGST</span>
+                                        <span>₹{(150 * totalPax).toLocaleString('en-IN')}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
+
+                    {/* Protection / Baggage */}
                     {baggage > 0 && (
                         <div className="flex justify-between items-center text-xs font-bold text-slate-500">
                             <div className="flex items-center gap-2 uppercase tracking-widest">
-                                <span className="w-3.5 h-3.5 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px]">+</span> Protection
+                                <span className="w-4 h-4 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px]">+</span> Protection
                             </div>
-                            <span className="text-gray-900">₹{baggage.toLocaleString('en-IN')}</span>
+                            <span className="text-gray-900 font-black">₹{baggage.toLocaleString('en-IN')}</span>
                         </div>
                     )}
+
+                    {/* Refundable */}
                     {refundable > 0 && (
                         <div className="flex justify-between items-center text-xs font-bold text-slate-500">
                             <div className="flex items-center gap-2 uppercase tracking-widest">
-                                <span className="w-3.5 h-3.5 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px]">+</span> Refundable
+                                <span className="w-4 h-4 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px]">+</span> Refundable
                             </div>
-                            <span className="text-gray-900">₹{refundable.toLocaleString('en-IN')}</span>
+                            <span className="text-gray-900 font-black">₹{refundable.toLocaleString('en-IN')}</span>
                         </div>
                     )}
+
+                    {/* Promo Discount */}
                     {promoDiscount > 0 && (
-                        <div className="flex justify-between items-center text-xs font-bold text-green-600">
-                            <div className="flex items-center gap-2 uppercase tracking-widest">
-                                <span className="w-3.5 h-3.5 rounded-full bg-green-100 inline-flex items-center justify-center text-[10px]">%</span> Promo Discount
+                        <div className="flex justify-between items-center bg-green-50 px-3 py-2 rounded-lg border border-green-100">
+                            <div className="flex items-center gap-2 text-green-600 text-[10px] font-black uppercase tracking-widest">
+                                <span className="w-4 h-4 bg-green-100 text-green-600 rounded-full inline-flex items-center justify-center text-[8px] leading-none text-[10px]">✓</span>
+                                Promo Discount Applied
                             </div>
-                            <span className="font-black">₹{promoDiscount.toLocaleString('en-IN')}</span>
+                            <span className="text-green-600 font-black text-xs">- ₹{promoDiscount.toLocaleString('en-IN')}</span>
                         </div>
                     )}
-                    <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
-                        <span className="text-sm font-bold text-gray-900 uppercase tracking-tight">Total Amount:</span>
-                        <span className="text-xl font-black text-gray-900 tracking-tighter">₹{total.toLocaleString('en-IN')}</span>
+
+                    <div className="pt-4 border-t border-slate-200 flex justify-between items-center">
+                        <span className="text-sm font-black text-gray-900 uppercase tracking-tight">Total Amount:</span>
+                        <span className="text-2xl font-black text-gray-900 tracking-tighter">₹{total.toLocaleString('en-IN')}</span>
                     </div>
                 </div>
             </div>
@@ -104,7 +205,7 @@ const FareSidebar = ({
                         <p className="text-[10px] font-bold text-slate-500 leading-tight">{selectedPromo.desc}</p>
                     </div>
                 )}
-                <div className="p-4 max-h-[300px] overflow-y-auto no-scrollbar space-y-3">
+                <div className="p-4 max-h-[300px] overflow-y-auto thick-scrollbar space-y-3">
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Choose from the offers below</p>
                     {PROMO_CODES.map(promo => (
                         <label key={promo.code} className="flex gap-3 cursor-pointer group">

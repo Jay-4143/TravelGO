@@ -316,6 +316,7 @@ const FlightBooking = () => {
             {/* Sidebar */}
             <FareSidebar
               flight={flight}
+              searchParams={searchParams}
               passengersCount={passengers.length}
               selectedPromo={selectedPromo}
               onPromoSelect={setSelectedPromo}

@@ -71,6 +71,7 @@ const FlightCard = ({ flight, tripType, returnFlight, onBook, specialFare, searc
   const [fareSubTab, setFareSubTab] = useState('change');
   const [showBaseFareBreakdown, setShowBaseFareBreakdown] = useState(false);
   const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
+  const [showInsuranceBreakdown, setShowInsuranceBreakdown] = useState(false);
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl hover:shadow-xl transition-all duration-300 overflow-hidden group">
@@ -356,7 +357,7 @@ const FlightCard = ({ flight, tripType, returnFlight, onBook, specialFare, searc
                         </button>
 
                         {showBaseFareBreakdown && (
-                          <div className="mt-2 ml-6 space-y-2 animate-fadeIn">
+                          <div className="mt-2 ml-6 space-y-2 animate-fadeIn border-l-2 border-slate-100 pl-4">
                             {searchParams?.adults > 0 && (
                               <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase tracking-tight">
                                 <span>Adult ({searchParams.adults} X ₹{Math.round(flight.price * 0.85).toLocaleString('en-IN')})</span>
@@ -399,7 +400,7 @@ const FlightCard = ({ flight, tripType, returnFlight, onBook, specialFare, searc
                         </button>
 
                         {showTaxBreakdown && (
-                          <div className="mt-2 ml-6 space-y-2 animate-fadeIn text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                          <div className="mt-2 ml-6 space-y-2 animate-fadeIn border-l-2 border-slate-100 pl-4 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
                             <div className="flex justify-between">
                               <span>User Dev. Fee</span>
                               <span>₹{(828 * totalTravellers).toLocaleString('en-IN')}</span>
@@ -416,22 +417,58 @@ const FlightCard = ({ flight, tripType, returnFlight, onBook, specialFare, searc
                         )}
                       </div>
 
+                      {/* Insurance */}
+                      <div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowInsuranceBreakdown(!showInsuranceBreakdown);
+                          }}
+                          className="w-full flex justify-between items-center text-xs group cursor-pointer"
+                        >
+                          <span className="text-slate-500 font-bold flex items-center gap-2 group-hover:text-blue-600 transition-colors">
+                            <span className={`w-4 h-4 rounded-full border border-slate-200 inline-flex items-center justify-center text-[10px] leading-none ${showInsuranceBreakdown ? 'bg-slate-800 border-slate-800 text-white' : ''}`}>
+                              {showInsuranceBreakdown ? '-' : '+'}
+                            </span>
+                            Insurance
+                          </span>
+                          <span className="text-slate-800 font-black tracking-tight">₹{(1990 * totalTravellers).toLocaleString('en-IN')}</span>
+                        </button>
+
+                        {showInsuranceBreakdown && (
+                          <div className="mt-2 ml-6 space-y-2 animate-fadeIn border-l-2 border-slate-100 pl-4 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                            <div className="flex justify-between">
+                              <span>Base Premium</span>
+                              <span>₹{(1690 * totalTravellers).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>SGST</span>
+                              <span>₹{(150 * totalTravellers).toLocaleString('en-IN')}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>CGST</span>
+                              <span>₹{(150 * totalTravellers).toLocaleString('en-IN')}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
                       {/* Promo Discount */}
                       {specialFare && FARE_DISCOUNTS[specialFare] && (
                         <div className="flex justify-between items-center bg-green-50 px-3 py-2 rounded-lg border border-green-100">
                           <span className="text-green-600 text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                             <span className="w-4 h-4 bg-green-100 text-green-600 rounded-full inline-flex items-center justify-center text-[8px] leading-none">✓</span>
-                            Promo Discount
+                            Promo Discount Applied
                           </span>
                           <span className="text-green-600 font-black text-xs">- ₹{(getFareDiscount(flight.price, specialFare) * totalTravellers).toLocaleString('en-IN')}</span>
                         </div>
                       )}
 
                       {/* Total */}
-                      <div className="pt-4 border-t border-slate-100">
+                      <div className="pt-4 border-t border-slate-200">
                         <div className="flex justify-between items-center">
-                          <span className="text-slate-800 font-black uppercase tracking-widest text-[11px]">Total Amount</span>
-                          <span className="text-red-500 font-black text-xl tracking-tighter">₹{((flight.price - getFareDiscount(flight.price, specialFare)) * totalTravellers).toLocaleString('en-IN')}</span>
+                          <span className="text-slate-800 font-black uppercase tracking-widest text-[13px]">Total Amount:</span>
+                          <span className="text-slate-900 font-black text-2xl tracking-tighter">₹{((flight.price - getFareDiscount(flight.price, specialFare)) * totalTravellers).toLocaleString('en-IN')}</span>
                         </div>
                       </div>
                     </div>
@@ -591,6 +628,7 @@ const FlightResults = ({
 }) => {
   const { formatPrice } = useGlobal();
   const [activeSort, setActiveSort] = useState("cheapest");
+  const [showMoreAirports, setShowMoreAirports] = useState(false);
 
   const airlines = useMemo(() => {
     const set = new Set(flights.map((f) => f.airline).filter(Boolean));
@@ -852,7 +890,7 @@ const FlightResults = ({
               {/* Airlines */}
               <div>
                 <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Airlines</h4>
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-2 no-scrollbar">
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-2 thick-scrollbar">
                   {airlines.map((air) => (
                     <label key={air} className="flex items-center justify-between group cursor-pointer border border-slate-50 p-3 rounded-xl hover:bg-red-50 hover:border-red-100 transition-all">
                       <div className="flex items-center gap-3">
@@ -875,23 +913,32 @@ const FlightResults = ({
               {/* Connecting Airports */}
               <div>
                 <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Connecting Airports</h4>
-                <div className="space-y-3 max-h-60 overflow-y-auto pr-2 no-scrollbar font-medium">
-                  {["Mumbai", "Delhi", "Bangalore", "Goa", "Kolkata", "Hyderabad", "Chennai"].map((city) => (
-                    <label key={city} className="flex items-center justify-between group cursor-pointer border border-slate-50 p-3 rounded-xl hover:bg-red-50 hover:border-red-100 transition-all">
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="checkbox"
-                          checked={filterParams.connectingAirport === city}
-                          onChange={(e) =>
-                            onFilterChange({ connectingAirport: e.target.checked ? city : undefined })
-                          }
-                          className="w-4 h-4 rounded border-slate-200 text-red-500 focus:ring-red-500"
-                        />
-                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest group-hover:text-red-600 transition-colors">{city}</span>
-                      </div>
-                    </label>
-                  ))}
-                  <button className="text-[10px] font-bold text-blue-600 hover:text-red-500 uppercase tracking-widest mt-2">+ 12 Airports</button>
+                <div className="space-y-3 max-h-64 overflow-y-auto pr-2 thick-scrollbar font-medium">
+                  {["Mumbai", "Delhi", "Bangalore", "Goa", "Kolkata", "Hyderabad", "Chennai", "Kochi", "Pune", "Ahmedabad", "Jaipur", "Lucknow", "Guwahati", "Chandigarh", "Srinagar", "Patna", "Indore", "Bhopal", "Bhubaneswar"].map((city, idx) => {
+                    const isVisible = showMoreAirports || idx < 4;
+                    if (!isVisible) return null;
+                    return (
+                      <label key={city} className="flex items-center justify-between group cursor-pointer border border-slate-50 p-3 rounded-xl hover:bg-red-50 hover:border-red-100 transition-all">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            checked={filterParams.connectingAirport === city}
+                            onChange={(e) =>
+                              onFilterChange({ connectingAirport: e.target.checked ? city : undefined })
+                            }
+                            className="w-4 h-4 rounded border-slate-200 text-red-500 focus:ring-red-500"
+                          />
+                          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest group-hover:text-red-600 transition-colors">{city}</span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                  <button
+                    onClick={() => setShowMoreAirports(!showMoreAirports)}
+                    className="text-[10px] font-bold text-blue-600 hover:text-red-500 uppercase tracking-widest mt-2"
+                  >
+                    {showMoreAirports ? "- Show Less" : "+ 12 Airports"}
+                  </button>
                 </div>
               </div>
             </div>

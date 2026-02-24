@@ -23,6 +23,27 @@
     animation: fadeIn 0.3s ease-out forwards;
   }
 
+  /* Thick visible scrollbar for specific panels */
+  .thick-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+    display: block !important;
+  }
+
+  .thick-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  .thick-scrollbar::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+  }
+
+  .thick-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #999;
+  }
+
   .no-scrollbar {
     -ms-overflow-style: none;
     /* IE and Edge */

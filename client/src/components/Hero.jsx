@@ -17,7 +17,7 @@ const travelClassToApi = (label) => {
   return map[label] || "economy";
 };
 
-const Hero = ({ onSearch, isInline = false, initialParams = null }) => {
+const Hero = ({ onSearch, isInline = false, isModal = false, initialParams = null }) => {
   const [tripType, setTripType] = useState("oneway");
   const [from, setFrom] = useState("Mumbai");
   const [fromCode, setFromCode] = useState("BOM");
@@ -297,16 +297,16 @@ const Hero = ({ onSearch, isInline = false, initialParams = null }) => {
 
   return (
     <section
-      className={`relative ${isInline ? "p-4 min-h-0 bg-white" : "min-h-[600px] flex items-start justify-center pt-8 pb-16 bg-cover bg-center bg-no-repeat"}`}
+      className={`relative ${isInline ? "p-4 min-h-0 bg-white" : isModal ? "p-8 min-h-0 bg-cover bg-center rounded-[2.5rem]" : "min-h-[600px] flex items-start justify-center pt-8 pb-16 bg-cover bg-center bg-no-repeat"}`}
       style={isInline ? {} : {
         backgroundImage: `linear-gradient(to right, rgba(37, 99, 235, 0.3) 0%, rgba(37, 99, 235, 0.1) 50%, transparent 100%), url('https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1920')`,
       }}
     >
-      <div className={`${isInline ? "w-full" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full"}`}>
-        {!isInline && (
-          <div className="flex justify-end mb-6">
-            <div className="inline-flex items-center gap-2 text-white text-xl font-bold drop-shadow-lg">
-              <span className="text-2xl">✈</span>
+      <div className={`${isInline ? "w-full" : isModal ? "w-full" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full"}`}>
+        {(!isInline || isModal) && (
+          <div className={`flex justify-end ${isModal ? "mb-4" : "mb-6"}`}>
+            <div className={`inline-flex items-center gap-2 text-white ${isModal ? "text-lg" : "text-xl"} font-bold drop-shadow-lg`}>
+              <span className={isModal ? "text-xl" : "text-2xl"}>✈</span>
               Book Flight Tickets
             </div>
           </div>

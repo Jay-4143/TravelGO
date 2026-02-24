@@ -118,7 +118,7 @@ const CalendarComponent = ({
   return (
     <div
       ref={panelRef}
-      className={`absolute z-[100] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300 ${className}`}
+      className={`absolute z-[100] bg-white rounded-2xl shadow-2xl border border-slate-100 animate-in fade-in slide-in-from-top-4 duration-300 max-h-[85vh] overflow-y-auto thick-scrollbar ${className}`}
       style={{
         left: '50%',
         transform: 'translateX(-50%)',

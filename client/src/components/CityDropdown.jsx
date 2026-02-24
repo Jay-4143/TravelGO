@@ -153,7 +153,7 @@ const CityDropdown = ({ isOpen, onClose, onSelect, position, className = "", lab
       </div>
 
       {/* Sections and Scrollable List */}
-      <div className="max-h-[450px] overflow-y-auto custom-scrollbar">
+      <div className="max-h-[450px] overflow-y-auto custom-scrollbar thick-scrollbar">
         {loading && (
           <div className="px-4 py-4 text-center text-sm text-gray-500 flex items-center justify-center gap-2">
             <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
