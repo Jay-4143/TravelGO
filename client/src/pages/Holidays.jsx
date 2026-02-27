@@ -72,8 +72,8 @@ const Holidays = () => {
     const [filters, setFilters] = useState({
         flightPref: null,
         holidayType: {},
-        budget: 575000,
-        duration: 10,
+        budget: [5000, 575000],
+        duration: [1, 10],
         country: {},
         city: {},
         quickFilters: []
@@ -199,14 +199,20 @@ const Holidays = () => {
 
     const basePackages = hasSearched ? searchResults : getTabPackages();
 
-    // Derived properties for filters
+    // Derived properties for filters & suggestions
     const availableCountries = [...new Set(basePackages.map(pkg => pkg.country).filter(Boolean))];
     const availableCities = [...new Set(basePackages.map(pkg => pkg.destination).filter(Boolean))];
+    const allAvailableLocations = [...new Set([...availableCities, ...availableCountries])];
 
     // Filter Logic
     const filteredPackages = basePackages.filter(pkg => {
-        if (filters.budget < pkg.price) return false;
-        if (filters.duration < (pkg.duration?.nights || 4)) return false;
+        const pkgPrice = pkg.price || 0;
+        const pkgNights = pkg.duration?.nights || 4;
+        const [minBudget, maxBudget] = filters.budget || [5000, 575000];
+        const [minDuration, maxDuration] = filters.duration || [1, 10];
+
+        if (pkgPrice < minBudget || pkgPrice > maxBudget) return false;
+        if (pkgNights < minDuration || pkgNights > maxDuration) return false;
 
         const selectedCountries = Object.keys(filters.country).filter(k => filters.country[k]);
         if (selectedCountries.length > 0 && !selectedCountries.includes(pkg.country)) return false;
@@ -279,6 +285,7 @@ const Holidays = () => {
                             {/* Anchored City Dropdown */}
                             <CityDropdown
                                 type="holidays"
+                                suggestedLocations={allAvailableLocations}
                                 isOpen={cityDropdownOpen}
                                 onClose={() => setCityDropdownOpen(false)}
                                 onSelect={(val) => {

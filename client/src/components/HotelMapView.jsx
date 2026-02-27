@@ -34,6 +34,19 @@ const defaultIcon = new L.Icon({
     shadowSize: [41, 41],
 });
 
+const bounceIcon = new L.divIcon({
+    html: `
+        <div style="position: relative; width: 100%; height: 100%;">
+            <img src="https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png" style="width: 57px; height: 57px; position: absolute; left: -11px; top: 0px;" />
+            <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png" class="animate-bounce relative z-10" style="width: 35px; height: 57px;" />
+        </div>
+    `,
+    className: 'custom-bounce-wrapper !z-[1000]',
+    iconSize: [35, 57],
+    iconAnchor: [17, 57],
+    popupAnchor: [1, -48],
+});
+
 const poiIcon = new L.Icon({
     iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png",
     shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
@@ -87,9 +100,21 @@ const FitBounds = ({ hotels, pois, activeCategory }) => {
 /**
  * HotelMapView
  */
-const HotelMapView = ({ hotels = [], hotel = null, onViewDetails, className = "" }) => {
+const HotelMapView = ({ hotels = [], hotel = null, hoveredHotelId = null, onViewDetails, className = "" }) => {
     const [activeCategory, setActiveCategory] = useState(null);
+    const markerRefs = useRef({});
+    const mapRef = useRef(null);
     const isSingle = !!hotel;
+
+    useEffect(() => {
+        if (hoveredHotelId && markerRefs.current[hoveredHotelId]) {
+            markerRefs.current[hoveredHotelId].openPopup();
+            // Automatically pan to marker if it's currently hidden by the scrollable map
+            // mapRef.current?.panTo(markerRefs.current[hoveredHotelId].getLatLng());
+        } else {
+            Object.values(markerRefs.current).forEach(m => m && m.closePopup());
+        }
+    }, [hoveredHotelId]);
 
     const hotelMarkers = useMemo(() => {
         return isSingle
@@ -164,9 +189,10 @@ const HotelMapView = ({ hotels = [], hotel = null, onViewDetails, className = ""
                 <MapContainer
                     center={center}
                     zoom={isSingle ? 15 : 5}
-                    className="w-full h-full"
+                    className="w-full h-full z-0"
                     style={{ minHeight: "inherit" }}
                     scrollWheelZoom={false}
+                    ref={mapRef}
                 >
                     <TileLayer
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -179,27 +205,45 @@ const HotelMapView = ({ hotels = [], hotel = null, onViewDetails, className = ""
                         <Marker
                             key={h._id || h.name}
                             position={[h.location.lat, h.location.lng]}
-                            icon={isSingle ? activeIcon : defaultIcon}
+                            icon={h._id === hoveredHotelId ? bounceIcon : (isSingle ? activeIcon : defaultIcon)}
+                            ref={(r) => {
+                                if (h._id) markerRefs.current[h._id] = r;
+                            }}
+                            zIndexOffset={h._id === hoveredHotelId ? 1000 : 0}
                         >
-                            <Popup minWidth={220} maxWidth={280}>
-                                <div className="p-1">
-                                    <h3 className="font-bold text-gray-900 text-base mb-1">{h.name}</h3>
-                                    <p className="text-xs text-gray-500 mb-1">{h.address || h.city}</p>
-                                    <div className="flex items-center gap-1 mb-1">
-                                        {Array.from({ length: h.starCategory || 3 }).map((_, i) => (
-                                            <span key={i} className="text-yellow-400 text-xs">★</span>
-                                        ))}
-                                        <span className="text-xs text-gray-600 ml-1">{h.rating?.toFixed(1)}</span>
+                            <Popup minWidth={240} maxWidth={300} className="custom-popup">
+                                <div className="flex flex-col gap-2 p-1">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-bold text-gray-900 text-[14px] mb-0.5 leading-tight">{h.name}</h3>
+                                            <div className="flex items-center gap-0.5">
+                                                {Array.from({ length: h.starCategory || 3 }).map((_, i) => (
+                                                    <span key={i} className="text-yellow-400 text-[10px]">★</span>
+                                                ))}
+                                            </div>
+                                        </div>
                                     </div>
-                                    {!isSingle && onViewDetails && (
-                                        <button
-                                            type="button"
-                                            onClick={() => onViewDetails(h)}
-                                            className="mt-2 w-full text-center text-[11px] px-3 py-2 bg-[#ff4d42] hover:bg-[#e63e33] text-white rounded font-black transition-colors uppercase tracking-wider shadow-sm"
-                                        >
-                                            Select Room
-                                        </button>
-                                    )}
+                                    <div className="flex gap-2 h-[80px]">
+                                        <img src={h.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=200"} className="w-[90px] h-full object-cover rounded-md" alt={h.name} />
+                                        <div className="flex-1 flex flex-col justify-between">
+                                            <div className="flex flex-wrap gap-1">
+                                                {(h.amenities || []).slice(0, 3).map((a, i) => (
+                                                    <span key={i} className="text-[9px] text-gray-600 bg-gray-50 border border-gray-100 px-1 py-0.5 rounded flex items-center gap-1">
+                                                        <span className="w-1 h-1 rounded-full bg-blue-400"></span>{a === "Free WiFi" ? "WiFi" : a}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                            {!isSingle && onViewDetails && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onViewDetails(h)}
+                                                    className="w-full text-center text-[10px] px-2 py-1.5 bg-[#D90429] hover:bg-red-700 text-white rounded font-bold transition-colors uppercase shadow-sm"
+                                                >
+                                                    Select Room
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             </Popup>
                         </Marker>

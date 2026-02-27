@@ -48,6 +48,11 @@ const HOLIDAY_DESTINATIONS = [
   { code: "HAN", city: "Hanoi", name: "Hanoi", subType: "CITY", countryDesc: "Vietnam", flagUrl: "https://flagcdn.com/w20/vn.png" },
   { code: "ID", city: "Indonesia", name: "Indonesia", subType: "COUNTRY", countryDesc: "Indonesia", flagUrl: "https://flagcdn.com/w20/id.png" },
   { code: "DPS", city: "Bali", name: "Bali", subType: "CITY", countryDesc: "Indonesia", flagUrl: "https://flagcdn.com/w20/id.png" },
+  { code: "MV", city: "Maldives", name: "Maldives", subType: "COUNTRY", countryDesc: "Maldives", flagUrl: "https://flagcdn.com/w20/mv.png" },
+  { code: "LK", city: "Sri Lanka", name: "Sri Lanka", subType: "COUNTRY", countryDesc: "Sri Lanka", flagUrl: "https://flagcdn.com/w20/lk.png" },
+  { code: "MU", city: "Mauritius", name: "Mauritius", subType: "COUNTRY", countryDesc: "Mauritius", flagUrl: "https://flagcdn.com/w20/mu.png" },
+  { code: "EU", city: "Europe", name: "Europe", subType: "REGION" },
+  { code: "CH", city: "Switzerland", name: "Switzerland", subType: "COUNTRY", countryDesc: "Switzerland", flagUrl: "https://flagcdn.com/w20/ch.png" },
 ];
 
 const COUNTRY_FLAGS = {
@@ -59,7 +64,7 @@ const COUNTRY_FLAGS = {
   PK: "🇵🇰", NP: "🇳🇵",
 };
 
-const CityDropdown = ({ isOpen, onClose, onSelect, position, className = "", label = "Destination", type }) => {
+const CityDropdown = ({ isOpen, onClose, onSelect, position, className = "", label = "Destination", type, suggestedLocations = [] }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [apiResults, setApiResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -129,7 +134,25 @@ const CityDropdown = ({ isOpen, onClose, onSelect, position, className = "", lab
   let displayList = [];
 
   if (type === "holidays") {
-    displayList = HOLIDAY_DESTINATIONS.filter(
+    // Inject dynamic suggested locations at the top
+    const dynamicSuggestions = suggestedLocations.map(cityOrCountry => ({
+      code: cityOrCountry.substring(0, 3).toUpperCase(),
+      city: cityOrCountry,
+      name: cityOrCountry,
+      subType: "SUGGESTED",
+      countryDesc: "Suggested",
+    }));
+
+    // Prevent duplicates in the merged list
+    const usedNames = new Set(dynamicSuggestions.map(s => s.name.toLowerCase()));
+
+    // Merge dynamically passed locations + static ones
+    const combinedDestinations = [
+      ...dynamicSuggestions,
+      ...HOLIDAY_DESTINATIONS.filter(dest => !usedNames.has(dest.name.toLowerCase()))
+    ];
+
+    displayList = combinedDestinations.filter(
       (dest) =>
         dest.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
         dest.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -216,9 +239,9 @@ const CityDropdown = ({ isOpen, onClose, onSelect, position, className = "", lab
               </div>
             )}
 
-            {displayList.map((airport) => (
+            {displayList.map((airport, index) => (
               <button
-                key={airport.code + (airport.subType || "")}
+                key={`${airport.code}_${index}_${airport.subType || ""}`}
                 type="button"
                 onClick={() => handleSelect(airport)}
                 className="w-full px-4 py-3 hover:bg-slate-50 transition-all text-left group border-b border-slate-50 last:border-0"

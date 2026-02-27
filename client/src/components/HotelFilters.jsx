@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FaChevronDown, FaChevronUp, FaStar, FaSearch, FaTimes } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaStar, FaSearch, FaTimes, FaMapMarkerAlt } from "react-icons/fa";
 
 // ─── Filter Data Constants ──────────────────────────────────────────────────
 
@@ -41,10 +41,20 @@ const AMENITIES = [
 ];
 
 const CHAIN_PROPERTIES = [
-    "Independent", "Oravel Travel (OYO)", "Ramee Guestline",
-    "Ramee Hotels Group", "Hilton Worldwide", "Marriott International",
-    "IHG Hotels", "Hyatt", "Taj Hotels", "Oberoi Group",
-    "Accor Hotels", "Radisson Hotels",
+    { label: "Independent", value: "Independent" },
+    { label: "Oravel Travel (OYO)", value: "OYO" },
+    { label: "Ramee Guestline", value: "Ramee" },
+    { label: "Hilton Worldwide", value: "Hilton" },
+    { label: "Marriott International", value: "Marriott" },
+    { label: "IHG Hotels", value: "IHG" },
+    { label: "Hyatt", value: "Hyatt" },
+    { label: "Taj Hotels", value: "Taj" },
+    { label: "Oberoi Group", value: "Oberoi" },
+    { label: "Accor Hotels", value: "Accor" },
+    { label: "Radisson Hotels", value: "Radisson" },
+    { label: "ITC Hotels", value: "ITC" },
+    { label: "Lemon Tree Hotels", value: "Lemon Tree" },
+    { label: "The Leela", value: "The Leela" },
 ];
 
 const PROPERTY_TYPES = [
@@ -58,23 +68,34 @@ const PROPERTY_TYPES = [
 const VIEW_LIMIT = 5;
 
 /** A collapsible section with a bold header and chevron toggle */
-const FilterSection = ({ title, children, defaultOpen = true }) => {
+const FilterSection = ({ title, children, defaultOpen = true, onReset, hasActive }) => {
     const [open, setOpen] = useState(defaultOpen);
     return (
         <div className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
-            <button
-                type="button"
-                onClick={() => setOpen(!open)}
-                className="flex items-center justify-between w-full mb-3 group"
-            >
-                <span className="text-xs font-black text-gray-800 uppercase tracking-widest">
-                    {title}
-                </span>
-                {open
-                    ? <FaChevronUp className="text-gray-400 text-xs group-hover:text-blue-500 transition-colors" />
-                    : <FaChevronDown className="text-gray-400 text-xs group-hover:text-blue-500 transition-colors" />
-                }
-            </button>
+            <div className="flex justify-between items-center mb-3">
+                <button
+                    type="button"
+                    onClick={() => setOpen(!open)}
+                    className="flex items-center gap-2 group cursor-pointer"
+                >
+                    {open
+                        ? <FaChevronDown className="text-gray-400 text-xs group-hover:text-blue-500 transition-colors" />
+                        : <FaChevronUp className="text-gray-400 text-xs group-hover:text-blue-500 transition-colors" />
+                    }
+                    <span className="text-sm font-black text-gray-800 uppercase tracking-tight">
+                        {title}
+                    </span>
+                </button>
+                {hasActive && (
+                    <button
+                        type="button"
+                        onClick={onReset}
+                        className="text-sm text-blue-600 hover:text-blue-800 transition-all cursor-pointer bg-transparent border-0 underline"
+                    >
+                        Reset
+                    </button>
+                )}
+            </div>
             {open && children}
         </div>
     );
@@ -141,7 +162,7 @@ const CollapsibleList = ({ items, renderItem }) => {
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-const HotelFilters = ({ filterParams, onFilterChange }) => {
+const HotelFilters = ({ filterParams, onFilterChange, viewMode, setViewMode }) => {
     const [hotelNameInput, setHotelNameInput] = useState(filterParams.hotelName || "");
 
     // ── helpers ──
@@ -190,9 +211,30 @@ const HotelFilters = ({ filterParams, onFilterChange }) => {
         v !== undefined && v !== false && (Array.isArray(v) ? v.length > 0 : true)
     );
 
-    // ── render ──
     return (
         <aside className="lg:w-72 flex-shrink-0">
+            {/* Map View Toggle Button */}
+            {setViewMode && viewMode !== "map" && (
+                <button
+                    type="button"
+                    onClick={() => setViewMode("map")}
+                    className="w-full bg-[#E5F1FB] hover:bg-[#D4E8F9] border border-[#BDE0FE] rounded-lg py-5 mb-4 flex items-center justify-center gap-2 transition-all relative overflow-hidden group shadow-sm"
+                    style={{
+                        backgroundImage: `url('https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=400&auto=format&fit=crop')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                    }}
+                >
+                    <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] group-hover:bg-white/60 transition-colors" />
+                    <div className="relative z-10 flex items-center gap-2.5">
+                        <FaMapMarkerAlt className="text-[#FF4D4D] text-2xl drop-shadow-sm" />
+                        <span className="font-extrabold text-[15px] text-[#006CE4] uppercase tracking-wider drop-shadow-sm">
+                            SEE MAP VIEW
+                        </span>
+                    </div>
+                </button>
+            )}
+
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm sticky top-24 overflow-hidden">
 
                 {/* Header */}
@@ -238,7 +280,15 @@ const HotelFilters = ({ filterParams, onFilterChange }) => {
                     </FilterSection>
 
                     {/* 2. Popular Filters */}
-                    <FilterSection title="Popular Filter">
+                    <FilterSection
+                        title="Popular Filter"
+                        hasActive={POPULAR_FILTERS.some(f => !!filterParams[f.key])}
+                        onReset={() => {
+                            const updates = {};
+                            POPULAR_FILTERS.forEach(f => updates[f.key] = undefined);
+                            onFilterChange(updates);
+                        }}
+                    >
                         <CollapsibleList
                             items={POPULAR_FILTERS}
                             renderItem={(f) => (
@@ -253,7 +303,11 @@ const HotelFilters = ({ filterParams, onFilterChange }) => {
                     </FilterSection>
 
                     {/* 3. Customer Ratings */}
-                    <FilterSection title="Customer Ratings">
+                    <FilterSection
+                        title="Customer Ratings"
+                        hasActive={filterParams.minRating !== undefined}
+                        onReset={() => onFilterChange({ minRating: undefined })}
+                    >
                         <div className="space-y-1">
                             {CUSTOMER_RATINGS.map((r) => (
                                 <CheckRow
@@ -269,7 +323,11 @@ const HotelFilters = ({ filterParams, onFilterChange }) => {
                     </FilterSection>
 
                     {/* 4. Star Rating */}
-                    <FilterSection title="Star Rating">
+                    <FilterSection
+                        title="Star Rating"
+                        hasActive={filterParams.stars?.length > 0}
+                        onReset={() => onFilterChange({ stars: undefined })}
+                    >
                         <div className="space-y-1">
                             {STAR_OPTIONS.map(({ stars }) => (
                                 <CheckRow
@@ -294,7 +352,11 @@ const HotelFilters = ({ filterParams, onFilterChange }) => {
                     </FilterSection>
 
                     {/* 5. Price Range */}
-                    <FilterSection title="Price Range (per night)">
+                    <FilterSection
+                        title="Price Range (per night)"
+                        hasActive={filterParams.minPrice !== undefined || filterParams.maxPrice !== undefined}
+                        onReset={() => onFilterChange({ minPrice: undefined, maxPrice: undefined })}
+                    >
                         <div className="space-y-1 mb-3">
                             {PRICE_RANGES.map((range) => {
                                 const active =
@@ -332,7 +394,11 @@ const HotelFilters = ({ filterParams, onFilterChange }) => {
                     </FilterSection>
 
                     {/* 6. Amenities */}
-                    <FilterSection title="Amenities">
+                    <FilterSection
+                        title="Amenities"
+                        hasActive={filterParams.amenities?.length > 0}
+                        onReset={() => onFilterChange({ amenities: undefined })}
+                    >
                         <CollapsibleList
                             items={AMENITIES}
                             renderItem={(amenity) => (
@@ -347,22 +413,30 @@ const HotelFilters = ({ filterParams, onFilterChange }) => {
                     </FilterSection>
 
                     {/* 7. Chain Properties */}
-                    <FilterSection title="Chain Properties">
+                    <FilterSection
+                        title="Chain Properties"
+                        hasActive={filterParams.chainNames?.length > 0}
+                        onReset={() => onFilterChange({ chainNames: undefined })}
+                    >
                         <CollapsibleList
                             items={CHAIN_PROPERTIES}
                             renderItem={(chain) => (
                                 <CheckRow
-                                    key={chain}
-                                    label={chain}
-                                    checked={filterParams.chainNames?.includes(chain) || false}
-                                    onChange={() => toggleArrayItem("chainNames", chain)}
+                                    key={chain.value}
+                                    label={chain.label}
+                                    checked={filterParams.chainNames?.includes(chain.value) || false}
+                                    onChange={() => toggleArrayItem("chainNames", chain.value)}
                                 />
                             )}
                         />
                     </FilterSection>
 
                     {/* 8. Property Type */}
-                    <FilterSection title="Property Type">
+                    <FilterSection
+                        title="Property Type"
+                        hasActive={filterParams.propertyTypes?.length > 0}
+                        onReset={() => onFilterChange({ propertyTypes: undefined })}
+                    >
                         <CollapsibleList
                             items={PROPERTY_TYPES}
                             renderItem={(type) => (

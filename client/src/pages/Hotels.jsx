@@ -22,6 +22,7 @@ const Hotels = () => {
   const searchBarRef = useRef(null);
   const [searchParams, setSearchParams] = useState(null);
   const [filterParams, setFilterParams] = useState({});
+  const [viewMode, setViewMode] = useState("list"); // "list" | "map"
   const [sort, setSort] = useState("rating");
   const [order, setOrder] = useState("desc");
   const [hotels, setHotels] = useState([]);
@@ -214,6 +215,7 @@ const Hotels = () => {
           onModify={() => setIsModifyModalOpen(true)}
           selectedHotels={selectedHotels}
           onClearSelection={() => setSelectedHotels([])}
+          viewMode={viewMode}
         />
       )}
 
@@ -256,11 +258,13 @@ const Hotels = () => {
 
       {!searchParams && <ServicesStrip />}
       {searchParams && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section className={viewMode === "map" ? "w-full max-w-[100%] mx-auto px-4 sm:px-6 lg:px-8 py-4 transition-all duration-300" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 transition-all duration-300"}>
           <div className="flex flex-col lg:flex-row gap-8">
             <HotelFilters
               filterParams={filterParams}
               onFilterChange={handleFilterChange}
+              viewMode={viewMode}
+              setViewMode={setViewMode}
             />
             <div className="flex-1 min-w-0">
               {error && (
@@ -278,6 +282,8 @@ const Hotels = () => {
                 onPageChange={(page) => {
                   if (searchParams) runSearch(searchParams, filterParams, sort, order, page);
                 }}
+                viewMode={viewMode}
+                setViewMode={setViewMode}
                 sort={sort}
                 order={order}
                 loading={loading}

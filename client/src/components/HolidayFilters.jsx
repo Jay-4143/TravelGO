@@ -1,6 +1,5 @@
 import React from 'react';
-
-const HolidayFilters = ({ filters, setFilters, availableCountries, availableCities, filteredCount }) => {
+import MultiRangeSlider from './MultiRangeSlider'; const HolidayFilters = ({ filters, setFilters, availableCountries, availableCities, filteredCount }) => {
 
     const handleFlightToggle = (type) => {
         setFilters(prev => ({ ...prev, flightPref: prev.flightPref === type ? null : type }));
@@ -23,8 +22,8 @@ const HolidayFilters = ({ filters, setFilters, availableCountries, availableCiti
         setFilters({
             flightPref: null,
             holidayType: {},
-            budget: 575000,
-            duration: 10,
+            budget: [5000, 575000],
+            duration: [1, 10],
             country: {},
             city: {},
             quickFilters: []
@@ -33,8 +32,8 @@ const HolidayFilters = ({ filters, setFilters, availableCountries, availableCiti
 
     const resetFilterSection = (section) => {
         if (section === 'flights') setFilters(prev => ({ ...prev, flightPref: null }));
-        else if (section === 'budget') setFilters(prev => ({ ...prev, budget: 575000 }));
-        else if (section === 'duration') setFilters(prev => ({ ...prev, duration: 10 }));
+        else if (section === 'budget') setFilters(prev => ({ ...prev, budget: [5000, 575000] }));
+        else if (section === 'duration') setFilters(prev => ({ ...prev, duration: [1, 10] }));
         else setFilters(prev => ({ ...prev, [section]: {} }));
     };
 
@@ -127,18 +126,16 @@ const HolidayFilters = ({ filters, setFilters, availableCountries, availableCiti
                     <button onClick={() => resetFilterSection('budget')} className="text-blue-600 text-xs hover:underline">Reset</button>
                 </div>
                 <div className="mt-4 px-1">
-                    <input
-                        type="range"
-                        min="5000"
-                        max="1000000"
-                        step="5000"
-                        value={filters.budget}
-                        onChange={(e) => setFilters(prev => ({ ...prev, budget: parseInt(e.target.value) }))}
-                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
+                    <MultiRangeSlider
+                        min={5000}
+                        max={1000000}
+                        step={5000}
+                        value={filters.budget || [5000, 575000]}
+                        onChange={(val) => setFilters(prev => ({ ...prev, budget: val }))}
                     />
                     <div className="flex justify-between items-center mt-2">
-                        <span className="text-xs text-gray-600 font-medium">₹5,000</span>
-                        <span className="text-xs text-gray-800 font-bold">₹{filters.budget.toLocaleString()}</span>
+                        <span className="text-xs text-gray-600 font-medium">₹{(filters.budget?.[0] || 5000).toLocaleString()}</span>
+                        <span className="text-xs text-gray-800 font-bold">₹{(filters.budget?.[1] || 575000).toLocaleString()}</span>
                     </div>
                 </div>
             </div>
@@ -150,18 +147,16 @@ const HolidayFilters = ({ filters, setFilters, availableCountries, availableCiti
                     <button onClick={() => resetFilterSection('duration')} className="text-blue-600 text-xs hover:underline">Reset</button>
                 </div>
                 <div className="mt-4 px-1">
-                    <input
-                        type="range"
-                        min="1"
-                        max="30"
-                        step="1"
-                        value={filters.duration}
-                        onChange={(e) => setFilters(prev => ({ ...prev, duration: parseInt(e.target.value) }))}
-                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-700"
+                    <MultiRangeSlider
+                        min={1}
+                        max={30}
+                        step={1}
+                        value={filters.duration || [1, 10]}
+                        onChange={(val) => setFilters(prev => ({ ...prev, duration: val }))}
                     />
                     <div className="flex justify-between items-center mt-2">
-                        <span className="text-xs text-gray-600 font-medium">1N</span>
-                        <span className="text-xs text-gray-800 font-bold">{filters.duration}N</span>
+                        <span className="text-xs text-gray-600 font-medium">{filters.duration?.[0] || 1}N</span>
+                        <span className="text-xs text-gray-800 font-bold">{filters.duration?.[1] || 10}N</span>
                     </div>
                 </div>
             </div>

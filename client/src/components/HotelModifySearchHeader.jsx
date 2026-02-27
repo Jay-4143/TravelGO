@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { FaShareAlt, FaWhatsapp, FaEnvelope } from "react-icons/fa";
 
-const HotelModifySearchHeader = ({ searchParams, onModify, selectedHotels = [], onClearSelection }) => {
+const HotelModifySearchHeader = ({ searchParams, onModify, selectedHotels = [], onClearSelection, viewMode = "list" }) => {
     const [isShareOpen, setIsShareOpen] = useState(false);
     const shareRef = useRef(null);
 
@@ -62,7 +62,7 @@ const HotelModifySearchHeader = ({ searchParams, onModify, selectedHotels = [], 
 
     return (
         <div className="bg-[#f2f4f7] sticky top-16 z-[90] animate-in slide-in-from-top duration-300 pb-4">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+            <div className={viewMode === "map" ? "w-full max-w-[100%] mx-auto px-4 sm:px-6 lg:px-8 pt-4 transition-all duration-300" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 transition-all duration-300"}>
                 <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-6 py-4 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2 md:gap-10 overflow-x-auto no-scrollbar py-1">
                         <div className="flex items-center gap-4 pr-6 border-r border-gray-100 shrink-0">
