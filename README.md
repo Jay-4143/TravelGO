@@ -1,6 +1,6 @@
-# TravelGO - Complete Travel Booking Platform
+# Raj Travels - Complete Travel Booking Platform
 
-TravelGO is a comprehensive, full-stack travel booking application that provides users with a seamless experience for searching and booking flights, hotels, and buses, as well as applying for visas. The platform features an interactive map UI, multi-step application forms, secure authentication, and a robust payment integration.
+Raj Travels is a comprehensive, full-stack travel booking application that provides users with a seamless experience for searching and booking flights, hotels, and buses, as well as applying for visas. The platform features an interactive map UI, multi-step application forms, secure authentication, and a robust payment integration.
 
 ## Features
 
@@ -40,8 +40,8 @@ TravelGO is a comprehensive, full-stack travel booking application that provides
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/travelgo.git
-cd travelgo
+git clone https://github.com/yourusername/RajTravels.git
+cd RajTravels
 ```
 
 ### 2. Setup Backend Server
